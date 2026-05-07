@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BalanceCraft</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- SCREEN 1 -->
+    <div id="template-screen" class="screen active">
+
+        <h1>Выберите шаблон анализа</h1>
+
+        <div class="template-grid">
+
+            <div class="template-card active-card" id="progressionTemplate">
+                <h2>Прогрессия с затуханием</h2>
+                <p>
+                    Анализ динамики роста силы игрока,
+                    скорости прогрессии и деградации эффективности.
+                </p>
+            </div>
+
+            <div class="template-card disabled-card">
+                <h2>Потоки ресурсов</h2>
+                <p>Недоступно в демо-версии</p>
+            </div>
+
+            <div class="template-card disabled-card">
+                <h2>Конверсия ресурсов в силу</h2>
+                <p>Недоступно в демо-версии</p>
+            </div>
+
+            <div class="template-card disabled-card">
+                <h2>Вовлечённость игрока</h2>
+                <p>Недоступно в демо-версии</p>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- SCREEN 2 -->
+    <div id="dashboard-screen" class="screen">
+
+        <div class="topbar">
+
+            <div class="source-panel">
+                <div id="dataStatus" class="status-block">
+                    Источник данных не подключён
+                </div>
+                <input type="text" id="folderPath" placeholder="Источник данных не выбран" readonly>
+                <button id="browseBtn">Обзор</button>
+            </div>
+
+            <button id="importBtn">
+                Импортировать данные
+            </button>
+
+            <div class="panel">
+
+                <label class="label">Игрок</label>
+
+                <select id="playerSelect" class="player-select"></select>
+
+            </div>
+
+            <button id="metricsBtn">
+                Интерпретация метрик
+            </button>
+
+            <button id="runBtn">Построить графики</button>
+
+        </div>
+
+        <div class="dashboard-layout">
+
+            <div class="chart-container">
+                <canvas id="chartCanvas"></canvas>
+            </div>
+
+            <div class="metrics-panel">
+
+                <h2>Интерпретация метрик</h2>
+
+                <!-- <div class="preset-buttons">
+                    <button id="rpgPreset">RPG</button>
+                    <button id="rtsPreset">RTS</button>
+                </div>
+
+                <div class="metric-card">
+                    <h3>EV</h3>
+                    <p id="evDescription">
+                        Скорость получения опыта
+                    </p>
+                </div>
+
+                <div class="metric-card">
+                    <h3>PGR</h3>
+                    <p id="pgrDescription">
+                        Темп роста уровня персонажа
+                    </p>
+                </div>
+
+                <div class="metric-card">
+                    <h3>DR</h3>
+                    <p id="drDescription">
+                        Снижение эффективности прогрессии
+                    </p>
+                </div> -->
+
+                <div class="stability-block">
+                    <h3>Состояние системы</h3>
+                    <p id="stabilityText">
+                        Стабильная динамика
+                    </p>
+                </div>
+
+                <div class="metric-card">
+
+                    <h3>Lyapunov Exponent</h3>
+
+                    <p id="lyapunovValue">
+                        0.084
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div id="devConsole" class="dev-console">
+
+            <div class="dev-header">
+                SYSTEM LOG
+            </div>
+
+            <div id="devLogContent" class="dev-log-content">
+                Developer console initialized...
+            </div>
+
+        </div>
+
+    </div>
+
+<!-- SCREEN 3 -->
+
+<div id="metrics-screen" class="screen">
+
+    <div class="metrics-editor">
+
+        <h1>Интерпретация метрик</h1>
+
+        <div class="metric-input">
+
+            <label>EV</label>
+            <input type="text" id="evInput"
+                   value="Скорость получения опыта">
+
+        </div>
+
+        <div class="metric-input">
+
+            <label>PGR</label>
+            <input type="text" id="pgrInput"
+                   value="Темп роста уровня">
+
+        </div>
+
+        <div class="metric-input">
+
+            <label>DR</label>
+            <input type="text" id="drInput"
+                   value="Деградация прогрессии">
+
+        </div>
+
+        <button id="saveMetricsBtn">
+            Сохранить и вернуться к анализу
+        </button>
+
+    </div>
+
+</div>
+
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="../frontend/libs/chart.umd.js"></script>
+    <script src="../frontend/libs/chartjs-plugin-annotation.min.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>

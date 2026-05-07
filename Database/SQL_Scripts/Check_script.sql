@@ -1,0 +1,23 @@
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE players;
+TRUNCATE TABLE items;
+TRUNCATE TABLE skills;
+TRUNCATE TABLE events;
+TRUNCATE TABLE sessions;
+TRUNCATE TABLE player_equipment;
+TRUNCATE TABLE player_skills;
+TRUNCATE TABLE session_metrics;
+TRUNCATE TABLE simulation_results;
+TRUNCATE TABLE chaos_indicators;
+SET FOREIGN_KEY_CHECKS = 1;
+
+SELECT * FROM players;
+SELECT * FROM items;
+SELECT * FROM skills;
+SELECT * FROM player_equipment;
+SELECT * FROM player_skills;
+SELECT * FROM events;
+SELECT * FROM sessions;
+SELECT * FROM session_metrics;
+SELECT * FROM simulation_results;
+SELECT * FROM chaos_indicators;
