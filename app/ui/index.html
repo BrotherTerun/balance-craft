@@ -55,45 +55,21 @@
 
     </div>
 
-    <!-- SCREEN 1 -->
-    <div id="template-screen" class="screen">
-
-        <h1>Выберите шаблон анализа</h1>
-
-        <div class="template-grid">
-
-            <div class="template-card active-card" id="progressionTemplate">
-                <h2>Прогрессия с затуханием</h2>
-                <p>
-                    Анализ динамики роста силы игрока,
-                    скорости прогрессии и деградации эффективности.
-                </p>
-            </div>
-
-            <div class="template-card disabled-card">
-                <h2>Потоки ресурсов</h2>
-                <p>Недоступно в демо-версии</p>
-            </div>
-
-            <div class="template-card disabled-card">
-                <h2>Конверсия ресурсов в силу</h2>
-                <p>Недоступно в демо-версии</p>
-            </div>
-
-            <div class="template-card disabled-card">
-                <h2>Вовлечённость игрока</h2>
-                <p>Недоступно в демо-версии</p>
-            </div>
-
-        </div>
-
-    </div>
-
+   
 
     <!-- SCREEN 2 -->
     <div id="dashboard-screen" class="screen">
 
         <div class="topbar">
+
+            <div class="analysis-dropdown">
+
+                <button id="analysisBtn">
+                    ☰ ANALYSIS
+                </button>
+
+            </div>
+
 
             <div class="source-panel">
                 <div id="dataStatus" class="status-block">
@@ -114,10 +90,6 @@
                 <select id="playerSelect" class="player-select"></select>
 
             </div>
-
-            <button id="metricsBtn">
-                Интерпретация метрик
-            </button>
 
             <button id="runBtn">Построить графики</button>
 
@@ -194,45 +166,172 @@
 
     </div>
 
-<!-- SCREEN 3 -->
+    <!-- ANALYSIS MENU -->
 
-<div id="metrics-screen" class="screen">
+    <div id="analysisMenu" class="analysis-menu is-hidden">
 
-    <div class="metrics-editor">
-
-        <h1>Интерпретация метрик</h1>
-
-        <div class="metric-input">
-
-            <label>EV</label>
-            <input type="text" id="evInput"
-                   value="Скорость получения опыта">
-
+        <div class="analysis-item" id="openTemplateModal">
+            Выбор шаблона
         </div>
 
-        <div class="metric-input">
-
-            <label>PGR</label>
-            <input type="text" id="pgrInput"
-                   value="Темп роста уровня">
-
+        <div class="analysis-item" id="openMetricsModal">
+            Интерпретация метрик
         </div>
 
-        <div class="metric-input">
-
-            <label>DR</label>
-            <input type="text" id="drInput"
-                   value="Деградация прогрессии">
-
+        <div class="analysis-item" id="openWhatIfModal">
+            What-if анализ
         </div>
-
-        <button id="saveMetricsBtn">
-            Сохранить и вернуться к анализу
-        </button>
 
     </div>
 
-</div>
+    <!-- TEMPLATE MODAL -->
+
+    <div id="templateModal"
+        class="modal-overlay is-hidden">
+
+        <div class="modal-window">
+
+            <h2>Шаблон анализа</h2>
+
+            <div class="template-grid">
+
+                <div class="template-card active-card">
+
+                    <h3>Прогрессия с затуханием</h3>
+
+                    <p>
+                        Анализ динамики прогрессии,
+                        темпа роста силы
+                        и деградации эффективности
+                    </p>
+
+                </div>
+
+                <div class="template-card disabled-card">
+
+                    <h3>Потоки ресурсов</h3>
+
+                    <p>Недоступно в демо</p>
+
+                </div>
+
+                <div class="template-card disabled-card">
+
+                    <h3>Конверсия ресурсов</h3>
+
+                    <p>Недоступно в демо</p>
+
+                </div>
+
+            </div>
+
+            <button class="closeModalBtn">
+                Закрыть
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- METRICS MODAL -->
+
+    <div id="metricsModal"
+        class="modal-overlay is-hidden">
+
+        <div class="modal-window">
+
+            <h2>Интерпретация метрик</h2>
+
+            <div class="metric-input">
+
+                <label>EV</label>
+
+                <input
+                    type="text"
+                    id="evInput"
+                    value="Скорость получения опыта"
+                >
+
+            </div>
+
+            <div class="metric-input">
+
+                <label>PGR</label>
+
+                <input
+                    type="text"
+                    id="pgrInput"
+                    value="Темп роста уровня"
+                >
+
+            </div>
+
+            <div class="metric-input">
+
+                <label>DR</label>
+
+                <input
+                    type="text"
+                    id="drInput"
+                    value="Деградация прогрессии"
+                >
+
+            </div>
+
+            <button id="saveMetricsBtn">
+                Сохранить
+            </button>
+
+            <button class="closeModalBtn">
+                Закрыть
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- WHAT IF MODAL -->
+
+    <div id="whatIfModal"
+        class="modal-overlay is-hidden">
+
+        <div class="modal-window">
+
+            <h2>What-if анализ</h2>
+
+            <div class="future-panel">
+
+                <div class="future-card">
+
+                    <h3>Баланс предметов</h3>
+
+                    <p>
+                        Регулировка силы предметов
+                        и влияния на экономику
+                    </p>
+
+                </div>
+
+                <div class="future-card">
+
+                    <h3>Баланс навыков</h3>
+
+                    <p>
+                        Анализ влияния навыков
+                        на темп прогрессии
+                    </p>
+
+                </div>
+
+            </div>
+
+            <button class="closeModalBtn">
+                Закрыть
+            </button>
+
+        </div>
+
+    </div>
 
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script src="../frontend/libs/chart.umd.js"></script>

@@ -231,19 +231,6 @@ function updateChartLabels() {
 
 document.getElementById("runBtn").addEventListener("click", analyzePlayer);
 
-const templateBtn = document.getElementById("progressionTemplate");
-
-templateBtn.addEventListener("click", () => {
-
-    document
-        .getElementById("template-screen")
-        .classList.remove("active");
-
-    document
-        .getElementById("dashboard-screen")
-        .classList.add("active");
-});
-
 const browseBtn = document.getElementById("browseBtn");
 
 browseBtn.addEventListener("click", async () => {
@@ -310,17 +297,6 @@ importBtn.addEventListener("click", async () => {
 });
 
 const metricsBtn = document.getElementById("metricsBtn");
-
-metricsBtn.addEventListener("click", () => {
-
-    document
-        .getElementById("dashboard-screen")
-        .classList.remove("active");
-
-    document
-        .getElementById("metrics-screen")
-        .classList.add("active");
-});
 
 let metricLabels = {
     ev: "Скорость получения опыта",
@@ -417,4 +393,73 @@ demoProject.addEventListener("click", () => {
     document
         .getElementById("dashboard-screen")
         .classList.add("active");
+});
+
+/* ---------- ANALYSIS MENU ---------- */
+
+const analysisBtn =
+    document.getElementById("analysisBtn");
+
+const analysisMenu =
+    document.getElementById("analysisMenu");
+
+analysisBtn.addEventListener("click", () => {
+
+    analysisMenu.classList.toggle("is-hidden");
+});
+
+/* ---------- MODALS ---------- */
+
+function openModal(id) {
+
+    analysisMenu.classList.add("is-hidden");
+
+    document
+        .getElementById(id)
+        .classList.remove("is-hidden");
+}
+
+function closeAllModals() {
+
+    document
+        .querySelectorAll(".modal-overlay")
+        .forEach(m => {
+
+            m.classList.add("is-hidden");
+        });
+}
+
+/* ---------- OPEN MODALS ---------- */
+
+document
+    .getElementById("openTemplateModal")
+    .addEventListener("click", () => {
+
+        openModal("templateModal");
+});
+
+document
+    .getElementById("openMetricsModal")
+    .addEventListener("click", () => {
+
+        openModal("metricsModal");
+});
+
+document
+    .getElementById("openWhatIfModal")
+    .addEventListener("click", () => {
+
+        openModal("whatIfModal");
+});
+
+/* ---------- CLOSE BUTTONS ---------- */
+
+document
+    .querySelectorAll(".closeModalBtn")
+    .forEach(btn => {
+
+        btn.addEventListener("click", () => {
+
+            closeAllModals();
+        });
 });
