@@ -1,7 +1,5 @@
 import mysql.connector
 import json
-import os
-from datetime import datetime, timedelta
 import math
 from decimal import Decimal
 

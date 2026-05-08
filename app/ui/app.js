@@ -463,3 +463,94 @@ document
             closeAllModals();
         });
 });
+
+const whatIfBtn =
+    document.getElementById("whatIfBtn");
+
+const whatIfPanel =
+    document.getElementById("whatIfPanel");
+
+const closeWhatIf =
+    document.getElementById("closeWhatIf");
+
+whatIfBtn.addEventListener("click", () => {
+
+    whatIfPanel.classList.add("visible");
+
+    loadWhatIfParameters();
+});
+
+closeWhatIf.addEventListener("click", () => {
+
+    whatIfPanel.classList.remove("visible");
+});
+
+function loadWhatIfParameters() {
+
+    const items = [
+        { name: "Iron Sword Cost", value: 25 },
+        { name: "Legendary Drop Rate", value: 5 }
+    ];
+
+    const skills = [
+        { name: "Fireball Damage", value: 60 },
+        { name: "Healing Efficiency", value: 40 }
+    ];
+
+    renderParameters(
+        "itemsContainer",
+        items
+    );
+
+    renderParameters(
+        "skillsContainer",
+        skills
+    );
+}
+
+function renderParameters(containerId, data) {
+
+    const container =
+        document.getElementById(containerId);
+
+    container.innerHTML = "";
+
+    data.forEach(param => {
+
+        const div =
+            document.createElement("div");
+
+        div.className = "whatif-param";
+
+        div.innerHTML = `
+            <div class="whatif-param-label">
+                <span>${param.name}</span>
+                <span>${param.value}</span>
+            </div>
+
+            <input
+                type="range"
+                min="0"
+                max="100"
+                value="${param.value}"
+                class="whatif-slider"
+            >
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+const applySimulationBtn =
+    document.getElementById("applySimulationBtn");
+
+applySimulationBtn.addEventListener("click", () => {
+
+    addLog(
+        "[What-if] Simulation parameters applied"
+    );
+
+    alert(
+        "Simulation configuration applied"
+    );
+});

@@ -65,11 +65,14 @@
             <div class="analysis-dropdown">
 
                 <button id="analysisBtn">
-                    ☰ ANALYSIS
+                    ☰ МЕНЮ АНАЛИЗА
                 </button>
 
             </div>
 
+            <button id="whatIfBtn">
+                WHAT-IF АНАЛИЗ
+            </button>
 
             <div class="source-panel">
                 <div id="dataStatus" class="status-block">
@@ -103,7 +106,7 @@
 
             <div class="metrics-panel">
 
-                <h2>Интерпретация метрик</h2>
+                <h2>Показатели стабильности</h2>
 
                 <!-- <div class="preset-buttons">
                     <button id="rpgPreset">RPG</button>
@@ -131,6 +134,16 @@
                     </p>
                 </div> -->
 
+                <div class="metric-card">
+
+                    <h3>Lyapunov Exponent</h3>
+
+                    <p id="lyapunovValue">
+                        ---
+                    </p>
+
+                </div>
+
                 <div class="stability-block">
                     <h3>Состояние системы</h3>
                     <p id="stabilityText">
@@ -138,15 +151,47 @@
                     </p>
                 </div>
 
-                <div class="metric-card">
+            </div>
 
-                    <h3>Lyapunov Exponent</h3>
+        </div>
 
-                    <p id="lyapunovValue">
-                        0.084
-                    </p>
+        <div id="whatIfPanel" class="whatif-panel">
+
+            <div class="whatif-header">
+
+                <h2>What-if Analysis</h2>
+
+                <button id="closeWhatIf">
+                    ✕
+                </button>
+
+            </div>
+
+            <div class="whatif-content">
+
+                <div class="whatif-section">
+
+                    <h3>Items</h3>
+
+                    <div id="itemsContainer"></div>
 
                 </div>
+
+                <div class="whatif-section">
+
+                    <h3>Skills</h3>
+
+                    <div id="skillsContainer"></div>
+
+                </div>
+
+            </div>
+
+            <div class="whatif-footer">
+
+                <button id="applySimulationBtn">
+                    Apply Simulation
+                </button>
 
             </div>
 

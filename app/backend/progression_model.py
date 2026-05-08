@@ -1,10 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime
 import mysql.connector
-from scipy.interpolate import interp1d
-import uuid
-import traceback
 
 # Конфигурация подключения к MySQL
 DB_CONFIG = {
