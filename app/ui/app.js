@@ -403,3 +403,18 @@ console.log = function(message) {
 
     originalConsoleLog(message);
 };
+
+
+const demoProject =
+    document.getElementById("demoProject");
+
+demoProject.addEventListener("click", () => {
+
+    document
+        .getElementById("project-screen")
+        .classList.remove("active");
+
+    document
+        .getElementById("dashboard-screen")
+        .classList.add("active");
+});
