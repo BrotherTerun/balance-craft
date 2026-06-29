@@ -42,16 +42,7 @@ CREATE TABLE events (
     id VARCHAR(36) PRIMARY KEY COMMENT 'Уникальный идентификатор события',
     session_id VARCHAR(36) NOT NULL COMMENT 'Идентификатор сессии',
     timestamp DATETIME NOT NULL COMMENT 'Временная метка события',
-    event_type ENUM(
-        'SESSION_START',
-        'SESSION_END',
-        'GAIN_XP',
-        'SPEND_XP',
-        'EQUIP_ITEM',
-        'UNEQUIP_ITEM',
-        'LEARN_SKILL',
-        'ACTION'
-    ) NOT NULL COMMENT 'Тип события',
+	event_type VARCHAR(64) NOT NULL COMMENT 'Тип события',
     event_data JSON COMMENT 'Данные события в формате JSON',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Дата создания записи',
     
@@ -88,15 +79,7 @@ CREATE TABLE session_metrics (
     id VARCHAR(36) PRIMARY KEY COMMENT 'Уникальный идентификатор записи',
     session_id VARCHAR(36) NOT NULL COMMENT 'Идентификатор сессии',
     player_id VARCHAR(36) NOT NULL COMMENT 'Идентификатор игрока',
-    metric_name ENUM(
-        'Y_EXP_VELOCITY',
-        'K_POWER_SCORE',
-        'L_SESSION_ENGAGEMENT',
-        'S_UNSPENT_RESOURCES',
-        'D_PROGRESSION_DECAY',
-        'A_PROGRESSION_ROI',
-        'SPEND_XP_TOTAL'
-    ) NOT NULL COMMENT 'Имя метрики',
+	metric_name VARCHAR(64) NOT NULL COMMENT 'Название метрики',
     metric_value DECIMAL(12,4) NOT NULL COMMENT 'Значение метрики',
     calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Время расчета',
     

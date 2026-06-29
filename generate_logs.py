@@ -1,9 +1,46 @@
 import json
-import uuid
-from datetime import datetime, timedelta
 import random
+from datetime import datetime, timedelta
 
-# Список существующих игроков
+
+# ============================================================
+# BalanceCraft universal pseudo-log generator
+# ============================================================
+#
+# Универсальный формат события:
+#
+# {
+#   "timestamp": "2026-05-07T18:24:11",
+#   "entity_id": "060b926a-5c47-49d2-babc-5bf42d76c846",
+#   "event_type": "flow_gain",
+#   "attributes": {
+#       "signal": "signal_alpha",
+#       "channel": "channel_01",
+#       "value": 150,
+#       "observation_id": "obs_001"
+#   }
+# }
+#
+# Важно:
+# - entity_id использует реальные players.id из БД;
+# - поле всё равно называется entity_id, а не player_id;
+# - event_type не содержит RPG-семантики вроде XP/gold/item;
+# - attributes.value нужен pipeline для расчёта метрик;
+# - observation_id нужен pipeline для разбиения на сессии/окна.
+# ============================================================
+
+
+RANDOM_SEED = 42
+
+OUTPUT_FILE = "events.jsonl"
+
+OBSERVATIONS_PER_ENTITY = 10
+
+MIN_EVENTS_PER_OBSERVATION = 45
+MAX_EVENTS_PER_OBSERVATION = 90
+
+
+# Существующие players.id из БД
 PLAYER_IDS = [
     "060b926a-5c47-49d2-babc-5bf42d76c846",
     "3c82f97f-d8ab-486f-bb54-f670fed1e92d",
@@ -17,6 +54,9 @@ PLAYER_IDS = [
     "dc7c4411-4a2e-4be2-9f74-53ef35e99edf"
 ]
 
+
+# Существующие items.id из БД.
+# Пока используются только как нейтральные ссылки на каталог объектов.
 ITEM_IDS = [
     "002c17a8-9e62-4909-a9e6-bec4816011bf",
     "17c7b5f5-0617-49e5-85db-cc0571b30b6e",
@@ -30,6 +70,9 @@ ITEM_IDS = [
     "f0a72897-8300-4b8e-80fd-cbe5f440b705"
 ]
 
+
+# Существующие skills.id из БД.
+# Пока используются только как нейтральные ссылки на каталог объектов.
 SKILL_IDS = [
     "32ca8011-da15-4ac9-876d-d89b37aa133f",
     "4721a6e6-8d37-413e-8f80-93f7abda87ac",
@@ -43,89 +86,305 @@ SKILL_IDS = [
     "dfe41941-4374-475e-99a3-2007b4add44c"
 ]
 
-# Типы событий
-EVENT_TYPES = ["GAIN_XP", "SPEND_XP", "EQUIP_ITEM", "UNEQUIP_ITEM", "LEARN_SKILL"]
+
+SIGNALS = [
+    "signal_alpha",
+    "signal_beta",
+    "signal_gamma",
+    "signal_delta",
+    "signal_epsilon"
+]
 
 
-def generate_session(player_id, session_num):
-    """Генерирует события для одной игровой сессии"""
+CHANNELS = [
+    "channel_01",
+    "channel_02",
+    "channel_03",
+    "channel_04"
+]
+
+
+CONTEXTS = [
+    "context_a",
+    "context_b",
+    "context_c",
+    "context_d"
+]
+
+
+# Универсальные типы событий.
+# Они не говорят, что именно происходит в игре.
+#
+# Но gain/reward/spend/loss нужны текущему pipeline,
+# чтобы он мог отделить условный входящий и исходящий поток.
+EVENT_TYPES_GAIN = [
+    "flow_gain",
+    "flow_reward",
+    "state_gain",
+    "conversion_gain"
+]
+
+
+EVENT_TYPES_SPEND = [
+    "flow_spend",
+    "flow_loss",
+    "state_spend",
+    "conversion_spend"
+]
+
+
+EVENT_TYPES_NEUTRAL = [
+    "interaction_tick",
+    "state_sample",
+    "signal_probe",
+    "object_reference"
+]
+
+
+def iso(dt):
+    return dt.replace(microsecond=0).isoformat()
+
+
+def choose_event_type(observation_index):
+    """
+    Создаёт лёгкую динамику:
+    - в ранних наблюдениях больше входящего потока;
+    - в поздних растёт доля исходящего потока;
+    - часть событий нейтральная.
+    """
+
+    late_factor = observation_index / max(
+        OBSERVATIONS_PER_ENTITY - 1,
+        1
+    )
+
+    gain_weight = max(
+        0.50 - late_factor * 0.18,
+        0.25
+    )
+
+    spend_weight = min(
+        0.16 + late_factor * 0.22,
+        0.42
+    )
+
+    roll = random.random()
+
+    if roll < gain_weight:
+        return random.choice(EVENT_TYPES_GAIN)
+
+    if roll < gain_weight + spend_weight:
+        return random.choice(EVENT_TYPES_SPEND)
+
+    return random.choice(EVENT_TYPES_NEUTRAL)
+
+
+def generate_value(event_type, entity_index, observation_index):
+    """
+    Генерирует значение без прямой игровой семантики.
+    """
+
+    base = 70 + entity_index * 7
+    trend = 1 + observation_index * 0.075
+    noise = random.uniform(0.72, 1.38)
+
+    event_type_lower = event_type.lower()
+
+    if (
+        "gain" in event_type_lower
+        or "reward" in event_type_lower
+    ):
+        value = base * trend * noise
+
+    elif (
+        "spend" in event_type_lower
+        or "loss" in event_type_lower
+    ):
+        value = base * (0.42 + observation_index * 0.045) * noise
+
+    else:
+        value = random.uniform(1, 12)
+
+    return round(value, 3)
+
+
+def maybe_add_catalog_reference(attributes):
+    """
+    Добавляет нейтральную ссылку на справочник объектов.
+
+    Важно:
+    - pipeline пока это не интерпретирует;
+    - БД менять не нужно;
+    - позже Binding Wizard сможет сказать:
+      catalog_a -> items,
+      catalog_b -> skills.
+    """
+
+    roll = random.random()
+
+    if roll < 0.10:
+
+        attributes["catalog_domain"] = "catalog_a"
+        attributes["object_id"] = random.choice(ITEM_IDS)
+
+    elif roll < 0.18:
+
+        attributes["catalog_domain"] = "catalog_b"
+        attributes["object_id"] = random.choice(SKILL_IDS)
+
+
+def generate_event(
+    entity_id,
+    entity_index,
+    observation_index,
+    event_index,
+    timestamp
+):
+    event_type = choose_event_type(
+        observation_index
+    )
+
+    value = generate_value(
+        event_type,
+        entity_index,
+        observation_index
+    )
+
+    observation_id = (
+        f"obs_{observation_index + 1:03d}"
+    )
+
+    attributes = {
+        "signal": random.choice(SIGNALS),
+        "channel": random.choice(CHANNELS),
+        "context": random.choice(CONTEXTS),
+        "value": value,
+        "observation_id": observation_id,
+        "event_index": event_index,
+        "weight": round(random.uniform(0.5, 1.5), 3)
+    }
+
+    if random.random() < 0.35:
+
+        attributes["modifier"] = round(
+            random.uniform(0.8, 1.25),
+            3
+        )
+
+    if random.random() < 0.25:
+
+        attributes["bucket"] = random.choice([
+            "bucket_low",
+            "bucket_mid",
+            "bucket_high"
+        ])
+
+    maybe_add_catalog_reference(attributes)
+
+    return {
+        "timestamp": iso(timestamp),
+        "entity_id": entity_id,
+        "event_type": event_type,
+        "attributes": attributes
+    }
+
+
+def generate_observation(
+    entity_id,
+    entity_index,
+    observation_index,
+    base_time
+):
+    """
+    Одно окно наблюдения.
+
+    Мы не называем его session на уровне лога.
+    Уже pipeline интерпретирует observation_id как сессионный срез.
+    """
+
     events = []
 
-    # Начало сессии
-    start_time = datetime.now() - timedelta(days=random.randint(1, 30))
-    events.append({
-        "id": f"event_{session_num}_001",
-        "player_id": player_id,
-        "timestamp": start_time.isoformat() + "Z",
-        "event_type": "SESSION_START",
-        "event_data": "{}"
-    })
+    start_time = (
+        base_time
+        + timedelta(days=observation_index)
+        + timedelta(minutes=entity_index * 13)
+    )
 
-    # Генерация событий внутри сессии
-    event_count = random.randint(500, 900)
     current_time = start_time
-    for i in range(event_count):
-        current_time += timedelta(minutes=random.randint(1, 20))
-        event_type = random.choice(EVENT_TYPES)
 
-        event_data = "{}"
-        if event_type == "GAIN_XP":
-            event_data = json.dumps({
-                "amount": random.randint(50, 500),
-                "source": random.choice(["quest", "combat", "exploration"])
-            })
-        elif event_type == "SPEND_XP":
-            event_data = json.dumps({
-                "amount": random.randint(20, 300),
-                "purpose": "skill_upgrade"
-            })
-        elif event_type in ["EQUIP_ITEM", "UNEQUIP_ITEM"]:
-            event_data = json.dumps({
-                "item_id": random.choice(ITEM_IDS)
-            })
-        elif event_type == "LEARN_SKILL":
-            event_data = json.dumps({
-                "skill_id": random.choice(SKILL_IDS)
-            })
+    event_count = random.randint(
+        MIN_EVENTS_PER_OBSERVATION,
+        MAX_EVENTS_PER_OBSERVATION
+    )
 
-        events.append({
-            "id": f"event_{session_num}_{i + 2:03d}",
-            "player_id": player_id,
-            "timestamp": current_time.isoformat() + "Z",
-            "event_type": event_type,
-            "event_data": event_data
-        })
+    for event_index in range(1, event_count + 1):
 
-    # Завершение сессии
-    end_time = current_time + timedelta(minutes=random.randint(5, 30))
-    events.append({
-        "id": f"event_{session_num}_999",
-        "player_id": player_id,
-        "timestamp": end_time.isoformat() + "Z",
-        "event_type": "SESSION_END",
-        "event_data": "{}"
-    })
+        current_time += timedelta(
+            seconds=random.randint(20, 180)
+        )
+
+        events.append(
+            generate_event(
+                entity_id=entity_id,
+                entity_index=entity_index,
+                observation_index=observation_index,
+                event_index=event_index,
+                timestamp=current_time
+            )
+        )
 
     return events
 
 
-def generate_logs(file_path, sessions_per_player=10):
-    """Генерирует файл логов с тестовыми данными"""
+def generate_logs(
+    file_path=OUTPUT_FILE,
+    observations_per_entity=OBSERVATIONS_PER_ENTITY
+):
+    random.seed(RANDOM_SEED)
+
     all_events = []
 
-    # Генерация сессий для каждого игрока
-    for player_id in PLAYER_IDS:
-        for i in range(sessions_per_player):
-            session_events = generate_session(player_id, len(all_events) + 1)
-            all_events.extend(session_events)
+    base_time = datetime.now() - timedelta(
+        days=observations_per_entity + 2
+    )
 
-    # Сохранение в файл
-    with open(file_path, 'w') as file:
+    for entity_index, entity_id in enumerate(PLAYER_IDS, 1):
+
+        for observation_index in range(observations_per_entity):
+
+            all_events.extend(
+                generate_observation(
+                    entity_id=entity_id,
+                    entity_index=entity_index,
+                    observation_index=observation_index,
+                    base_time=base_time
+                )
+            )
+
+    all_events.sort(
+        key=lambda event: event["timestamp"]
+    )
+
+    with open(file_path, "w", encoding="utf-8") as file:
+
         for event in all_events:
-            file.write(json.dumps(event) + "\n")
 
-    print(f"Сгенерировано {len(all_events)} событий для {len(PLAYER_IDS)} игроков")
+            file.write(
+                json.dumps(
+                    event,
+                    ensure_ascii=False
+                )
+                + "\n"
+            )
+
+    print(f"Сгенерировано событий: {len(all_events)}")
+    print(f"Сущностей: {len(PLAYER_IDS)}")
+    print(f"Окон наблюдения на сущность: {observations_per_entity}")
+    print(f"Файл: {file_path}")
 
 
 if __name__ == "__main__":
-    generate_logs("events.jsonl")
+
+    generate_logs(
+        OUTPUT_FILE
+    )

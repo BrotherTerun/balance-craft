@@ -38,17 +38,15 @@
 
                 <h2>Последние проекты</h2>
 
-                <div class="project-card" id="demoProject">
+                <div id="recentProjectsList" class="projects-list">
 
-                    <div class="project-card-title">
-                        RPG Progression Demo
-                    </div>
-
-                    <div class="project-card-db">
-                        DB: monitor_rpg_model
+                    <div class="empty-projects">
+                        Проекты пока не созданы
                     </div>
 
                 </div>
+
+            </div>
 
             </div>
 
@@ -66,25 +64,13 @@
             <div class="analysis-dropdown">
 
                 <button id="analysisBtn">
-                    ☰ МЕНЮ АНАЛИЗА
+                    ☰ МЕНЮ ПРОЕКТА
                 </button>
 
             </div>
 
             <button id="whatIfBtn">
                 WHAT-IF АНАЛИЗ
-            </button>
-
-            <div class="source-panel">
-                <div id="dataStatus" class="status-block">
-                    Источник данных не подключён
-                </div>
-                <input type="text" id="folderPath" placeholder="Источник данных не выбран" readonly>
-                <button id="browseBtn">Обзор</button>
-            </div>
-
-            <button id="importBtn">
-                Импортировать данные
             </button>
 
             <div class="panel player-panel">
@@ -117,7 +103,7 @@
 
             <div class="metrics-panel">
 
-                <h2>Показатели стабильности</h2>
+                <h2>Интерпретация анализа</h2>
 
                 <!-- <div class="preset-buttons">
                     <button id="rpgPreset">RPG</button>
@@ -145,21 +131,10 @@
                     </p>
                 </div> -->
 
-                <div class="metric-card">
-
-                    <h3>Lyapunov Exponent</h3>
-
-                    <p id="lyapunovValue">
-                        ---
-                    </p>
-
-                </div>
-
-                <div class="stability-block">
-                    <h3>Состояние системы</h3>
-                    <p id="stabilityText">
-                        Стабильная динамика
-                    </p>
+                <div id="practicalInsightsList" class="insights-list">
+                    <div class="insight-empty">
+                        Выводы появятся после анализа выбранного игрока или среднего значения по всем игрокам.
+                    </div>
                 </div>
 
             </div>
@@ -226,16 +201,282 @@
 
     <div id="analysisMenu" class="analysis-menu is-hidden">
 
-        <div class="analysis-item" id="openTemplateModal">
-            Выбор шаблона
+        <div class="analysis-item" id="openSourceModal">
+            Источник событий и импорт
         </div>
-
-        <div class="analysis-item" id="openMetricsModal">
-            Интерпретация метрик
+<div class="analysis-item" id="openBindingModal">
+            Мастер семантики
         </div>
-
-        <div class="analysis-item" id="openWhatIfModal">
+<div class="analysis-item" id="openWhatIfModal">
             What-if анализ
+        </div>
+
+    </div>
+
+    <!-- SOURCE IMPORT MODAL -->
+
+    <div id="sourceModal"
+        class="modal-overlay is-hidden">
+
+        <div class="modal-window source-modal-window">
+
+            <h2>Источник событий проекта</h2>
+
+            <p class="modal-hint">
+                Выберите директорию, содержащую файлы событий
+                в формате JSONL. Система найдёт все файлы
+                с расширением .jsonl и импортирует события
+                в текущий проект.
+            </p>
+
+            <div class="source-modal-field">
+
+                <label class="label">
+                    Директория событий
+                </label>
+
+                <input
+                    type="text"
+                    id="sourceFolderPath"
+                    placeholder="Источник данных не выбран"
+                    readonly
+                >
+
+                <button id="sourceBrowseBtn">
+                    Выбрать директорию
+                </button>
+
+            </div>
+
+            <div id="sourceImportResult"
+                class="import-result is-hidden">
+            </div>
+
+            <div class="modal-actions">
+
+                <button id="sourceImportBtn" class="primary-btn">
+                    Импортировать события
+                </button>
+
+                <button class="closeModalBtn secondary-btn">
+                    Закрыть
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- BINDING WIZARD -->
+
+    <div id="bindingModal"
+        class="modal-overlay is-hidden">
+
+        <div class="modal-window binding-modal-window">
+
+            <div class="binding-wizard-header">
+
+                <div>
+
+                    <h2>Мастер настройки семантики</h2>
+
+                    <p class="modal-hint">
+                        Мастер последовательно проведёт настройку: проверку найденных событий,
+                        выбор шаблона анализа, подготовку переменных, формул и названий метрик.
+                    </p>
+
+                </div>
+
+                <div id="bindingStepBadge" class="binding-step-badge">
+                    Шаг 1 из 6
+                </div>
+
+            </div>
+
+            <div id="bindingStatus"
+                class="binding-status loading">
+                Данные мастера ещё не загружены.
+            </div>
+
+            <div id="bindingProgress" class="binding-progress">
+
+                <div class="binding-progress-step active" data-binding-progress="1">
+                    <span>1</span>
+                    <strong>Данные</strong>
+                </div>
+
+                <div class="binding-progress-step" data-binding-progress="2">
+                    <span>2</span>
+                    <strong>Шаблон</strong>
+                </div>
+
+                <div class="binding-progress-step" data-binding-progress="3">
+                    <span>3</span>
+                    <strong>Формулы</strong>
+                </div>
+
+                <div class="binding-progress-step" data-binding-progress="4">
+                    <span>4</span>
+                    <strong>Переменные</strong>
+                </div>
+
+                <div class="binding-progress-step" data-binding-progress="5">
+                    <span>5</span>
+                    <strong>Названия</strong>
+                </div>
+
+                <div class="binding-progress-step" data-binding-progress="6">
+                    <span>6</span>
+                    <strong>Обзор</strong>
+                </div>
+
+            </div>
+
+            <div class="binding-step-panels">
+
+                <section class="binding-step-panel active" data-binding-step="1">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">1</span>
+                        <div>
+                            <h3>Найденные события и поля</h3>
+                            <p>
+                                Проверьте, что в импортированных данных присутствуют нужные типы событий,
+                                атрибуты event_data и поля таблиц. На следующих шагах их можно будет
+                                сопоставить с переменными выбранного шаблона.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingCandidates"
+                        class="binding-candidates">
+                    </div>
+
+                </section>
+
+                <section class="binding-step-panel" data-binding-step="2">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">2</span>
+                        <div>
+                            <h3>Выбор шаблона анализа</h3>
+                            <p>
+                                Наведите курсор на карточку, чтобы увидеть краткую подсказку.
+                                Нажмите на шаблон, чтобы выбрать его и посмотреть набор метрик и переменных.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingTemplates"
+                        class="binding-template-list">
+                    </div>
+
+                    <div id="bindingTemplateSummary"
+                        class="binding-template-summary is-hidden">
+                    </div>
+
+                </section>
+
+                <section class="binding-step-panel" data-binding-step="3">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">3</span>
+                        <div>
+                            <h3>Метрики и формулы шаблона</h3>
+                            <p>
+                                Здесь будет настраиваться логика выражений выбранного шаблона.
+                                Сейчас экран подготовлен как черновик следующего этапа.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingFormulaDraft"
+                        class="binding-formula-draft">
+                    </div>
+
+                </section>
+
+                <section class="binding-step-panel" data-binding-step="4">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">4</span>
+                        <div>
+                            <h3>Связь данных и переменных</h3>
+                            <p>
+                                На этом шаге переменные шаблона будут связываться с найденными полями событий
+                                и таблиц. Это подготовка к P4.4.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingVariableMappingDraft"
+                        class="binding-variable-mapping-draft">
+                    </div>
+
+                </section>
+
+                <section class="binding-step-panel" data-binding-step="5">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">5</span>
+                        <div>
+                            <h3>Семантика метрик</h3>
+                            <p>
+                                Назначьте метрикам понятные названия для конкретного проекта.
+                                Эти названия будут использоваться в графиках и подсказках.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingMetricLabelsDraft"
+                        class="binding-metric-labels-draft">
+                    </div>
+
+                </section>
+
+                <section class="binding-step-panel" data-binding-step="6">
+
+                    <div class="binding-section-header">
+                        <span class="binding-step">6</span>
+                        <div>
+                            <h3>Обзор настройки</h3>
+                            <p>
+                                Проверьте выбранный шаблон и подготовленные настройки семантики.
+                                Полное сохранение словаря переменных и формул будет добавлено следующим шагом.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="bindingOverviewDraft"
+                        class="binding-overview-draft">
+                    </div>
+
+                </section>
+
+            </div>
+
+            <div class="modal-actions binding-nav-actions">
+
+                <button id="bindingCancelBtn"
+                    class="secondary-btn">
+                    Отменить
+                </button>
+
+                <div class="binding-nav-spacer"></div>
+
+                <button id="bindingBackBtn"
+                    class="secondary-btn">
+                    Назад
+                </button>
+
+                <button id="bindingNextBtn"
+                    class="primary-btn">
+                    Далее
+                </button>
+
+            </div>
+
         </div>
 
     </div>
@@ -380,6 +621,22 @@
                 </div>
 
             </div>
+
+            <button class="closeModalBtn">
+                Закрыть
+            </button>
+
+        </div>
+
+    </div>
+
+    <div id="openProjectModal" class="modal-overlay is-hidden">
+
+        <div class="modal-window">
+
+            <h2>Открыть проект</h2>
+
+            <div id="openProjectsList" class="projects-list"></div>
 
             <button class="closeModalBtn">
                 Закрыть
