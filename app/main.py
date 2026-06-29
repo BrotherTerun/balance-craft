@@ -92,7 +92,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("BalanceCraft")
-        self.resize(1200, 800)
+        self.resize(1400, 850)
+        self.setMinimumSize(980, 620)
 
         self.browser = QWebEngineView()
         self.setCentralWidget(self.browser)
@@ -112,6 +113,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     window = MainWindow()
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec())

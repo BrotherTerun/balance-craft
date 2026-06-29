@@ -25,6 +25,16 @@
     --blur: blur(12px);
 }
 
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+html {
+    font-size: clamp(13px, 0.85vw, 16px);
+}
+
 /* ===== GLOBAL ===== */
 
 * {
@@ -34,6 +44,9 @@
 body {
     margin: 0;
     overflow: hidden;
+
+    width: 100vw;
+    height: 100vh;
 
     background:
         radial-gradient(circle at top left,
@@ -301,28 +314,47 @@ button:active {
 }
 
 .topbar {
-
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
 
-    gap: 14px;
+    gap: 12px;
 
-    padding: 16px 20px;
+    padding: clamp(10px, 1.2vw, 16px) clamp(12px, 1.5vw, 20px);
 
     background: rgba(12,14,20,0.72);
 
     border-bottom: 1px solid var(--border);
 
     backdrop-filter: blur(18px);
+
+    overflow: visible;
+
+    flex: 0 0 auto;
+}
+
+.topbar > * {
+    min-width: 0;
+}
+
+#analysisBtn,
+#whatIfBtn,
+#importBtn,
+#runBtn,
+#browseBtn {
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 
 .dashboard-layout {
-
     display: flex;
 
-    flex: 1;
+    flex: 1 1 auto;
 
+    min-width: 0;
     min-height: 0;
+
+    overflow: hidden;
 }
 
 /* ===== PANELS ===== */
@@ -365,14 +397,24 @@ button:active {
     gap: 8px;
 }
 
+.player-panel {
+    flex: 0 1 300px;
+    min-width: 240px;
+    max-width: 360px;
+}
+
 /* ===== SOURCE PANEL ===== */
 
 .source-panel {
-
     display: flex;
     align-items: center;
 
-    gap: 12px;
+    gap: 10px;
+
+    flex: 1 1 420px;
+
+    min-width: 280px;
+    max-width: 720px;
 }
 
 .status-block {
@@ -396,8 +438,12 @@ button:active {
 }
 
 #folderPath {
+    width: auto;
 
-    width: 360px;
+    flex: 1 1 180px;
+
+    min-width: 120px;
+    max-width: 520px;
 
     padding: 10px 12px;
 
@@ -408,14 +454,32 @@ button:active {
     border-radius: 10px;
 
     color: var(--text-main);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* ===== SELECT ===== */
+/* ===== CUSTOM PLAYER DROPDOWN ===== */
 
-.player-select {
+.player-panel {
+    flex: 0 1 300px;
+    min-width: 240px;
+    max-width: 360px;
+    position: relative;
+}
 
+.custom-select {
+    position: relative;
     width: 100%;
-    min-width: 220px;
+}
+
+.custom-select-btn {
+    width: 100%;
+    min-height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
     padding: 10px 14px;
 
@@ -424,66 +488,104 @@ button:active {
     background:
         linear-gradient(
             180deg,
-            rgba(255,255,255,0.06),
-            rgba(255,255,255,0.03)
+            rgba(255,255,255,0.07),
+            rgba(255,255,255,0.035)
         );
 
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.09);
 
     color: var(--text-main);
 
-    font-size: 14px;
+    font-size: 13px;
+    text-align: left;
 
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    box-shadow: none;
+}
+
+.custom-select-btn::after {
+    content: "▾";
+    margin-left: 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.custom-select-btn:hover {
+    border-color: rgba(110,168,255,0.35);
+    box-shadow: 0 0 18px rgba(110,168,255,0.14);
+}
+
+.custom-select-menu {
+    position: absolute;
+
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+
+    max-height: 260px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding: 6px;
+
+    background: rgba(16, 20, 30, 0.98);
+
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+
+    backdrop-filter: blur(18px);
+
+    box-shadow:
+        0 18px 45px rgba(0,0,0,0.45),
+        0 0 0 1px rgba(110,168,255,0.04);
+
+    z-index: 5000;
+}
+
+.custom-select-option {
+    width: 100%;
+
+    padding: 10px 12px;
+
+    border-radius: 10px;
+
+    color: var(--text-main);
+
+    font-size: 13px;
 
     cursor: pointer;
 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
     transition:
-        border-color 0.18s ease,
-        box-shadow 0.18s ease,
-        background 0.18s ease;
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
-.player-select:hover {
-
-    border-color: rgba(110,168,255,0.25);
-
-    background:
-        linear-gradient(
-            180deg,
-            rgba(255,255,255,0.08),
-            rgba(255,255,255,0.04)
-        );
+.custom-select-option:hover {
+    background: rgba(110,168,255,0.14);
 }
 
-.player-select:focus {
-
-    outline: none;
-
-    border-color: rgba(110,168,255,0.45);
-
-    box-shadow:
-        0 0 0 3px rgba(110,168,255,0.12);
-}
-
-.player-select option {
-
-    background: #161a22;
-
-    color: white;
+.custom-select-option.active {
+    background: rgba(110,168,255,0.22);
+    color: #dceaff;
 }
 
 /* ===== CHART ===== */
 
 .chart-container {
+    flex: 1 1 auto;
 
-    flex: 1;
+    min-width: 0;
+    min-height: 320px;
 
-    padding: 20px;
-
-    min-height: 0;
+    padding: clamp(12px, 1.4vw, 20px);
 }
 
 #chartCanvas {
@@ -510,14 +612,17 @@ button:active {
 /* ===== METRICS ===== */
 
 .metrics-panel {
+    width: clamp(280px, 24vw, 360px);
 
-    width: 340px;
+    flex: 0 1 clamp(280px, 24vw, 360px);
 
     border-left: 1px solid var(--border);
 
-    padding: 22px;
+    padding: clamp(14px, 1.5vw, 22px);
 
     overflow-y: auto;
+
+    min-width: 260px;
 }
 
 .metric-card {
@@ -832,6 +937,161 @@ button:active {
     font-size: 13px;
 
     line-height: 1.5;
+}
+
+/* ===== RESPONSIVE LAYOUT ===== */
+
+@media (max-width: 1350px) {
+
+    .topbar {
+        align-items: stretch;
+    }
+
+    .source-panel {
+        order: 3;
+        flex: 1 1 100%;
+        max-width: none;
+    }
+
+    #folderPath {
+        max-width: none;
+    }
+
+    .player-panel {
+        flex: 1 1 260px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 1050px) {
+
+    .dashboard-layout {
+        flex-direction: column;
+    }
+
+    .chart-container {
+        flex: 1 1 auto;
+        min-height: 360px;
+    }
+
+    .metrics-panel {
+        width: 100%;
+        max-height: 240px;
+
+        flex: 0 0 auto;
+
+        border-left: none;
+        border-top: 1px solid var(--border);
+
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 14px;
+    }
+
+    .metrics-panel h2 {
+        grid-column: 1 / -1;
+        margin-bottom: 0;
+    }
+
+    .metric-card,
+    .stability-block {
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 760px) {
+
+    .topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .source-panel {
+        flex-direction: column;
+        align-items: stretch;
+
+        min-width: 0;
+    }
+
+    #analysisBtn,
+    #whatIfBtn,
+    #importBtn,
+    #runBtn,
+    #browseBtn {
+        width: 100%;
+    }
+
+    .panel,
+    .player-panel {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .metrics-panel {
+        grid-template-columns: 1fr;
+        max-height: 260px;
+    }
+
+    .project-container {
+        width: min(92vw, 760px);
+    }
+
+    .project-title {
+        font-size: clamp(34px, 9vw, 58px);
+    }
+
+    .project-actions {
+        flex-direction: column;
+    }
+
+    .modal-window {
+        width: min(92vw, 720px);
+        max-height: 88vh;
+        overflow-y: auto;
+    }
+
+    .template-grid {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .whatif-panel {
+        width: min(100vw, 400px);
+        right: -100vw;
+    }
+}
+
+/* ===== LAYER FIXES ===== */
+
+#dashboard-screen {
+    position: relative;
+}
+
+.topbar {
+    position: relative;
+    z-index: 9000;
+    overflow: visible;
+}
+
+.dashboard-layout {
+    position: relative;
+    z-index: 1;
+}
+
+.metrics-panel {
+    position: relative;
+    z-index: 2;
+}
+
+.player-panel,
+.custom-select {
+    position: relative;
+    z-index: 9100;
+}
+
+.custom-select-menu {
+    z-index: 9200;
 }
 
 /* ===== UTIL ===== */

@@ -52,7 +52,7 @@ function updateInstabilityAnalysis(data) {
     }
 }
 
-new QWebChannel(qt.webChannelTransport, function(channel) {
+new QWebChannel(qt.webChannelTransport, async function(channel) {
 
     backend = channel.objects.backend;
 
@@ -61,6 +61,8 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
     });
 
     console.log("WebChannel подключен");
+
+    await loadPlayers();
 });
 
 const ctx = document.getElementById('chartCanvas').getContext('2d');
@@ -165,6 +167,10 @@ async function analyzePlayer() {
     }
 
     const playerId = document.getElementById("playerSelect").value;
+    if (!playerId) {
+        alert("Выберите игрока");
+        return;
+    }
 
     const response = await backend.analyzePlayer(playerId);
     const data = JSON.parse(response);
@@ -335,28 +341,141 @@ saveMetricsBtn.addEventListener("click", () => {
     }
 });
 
+function formatPlayerId(playerId) {
+
+    if (!playerId) {
+        return "Неизвестный игрок";
+    }
+
+    if (playerId.length <= 18) {
+        return playerId;
+    }
+
+    return `${playerId.slice(0, 8)}…${playerId.slice(-6)}`;
+}
+
+
+function closePlayerDropdown() {
+
+    const menu =
+        document.getElementById("playerDropdownMenu");
+
+    if (menu) {
+        menu.classList.add("is-hidden");
+    }
+}
+
+
+function setSelectedPlayer(playerId, label) {
+
+    const hiddenInput =
+        document.getElementById("playerSelect");
+
+    const button =
+        document.getElementById("playerDropdownBtn");
+
+    hiddenInput.value = playerId;
+    button.textContent = label || formatPlayerId(playerId);
+
+    document
+        .querySelectorAll(".custom-select-option")
+        .forEach(option => {
+
+            option.classList.toggle(
+                "active",
+                option.dataset.playerId === playerId
+            );
+        });
+}
+
+
 async function loadPlayers() {
+
     if (!backend) return;
 
-    const response = await backend.getPlayers();
-    const players = JSON.parse(response);
+    const response =
+        await backend.getPlayers();
 
-    const select = document.getElementById("playerSelect");
+    const players =
+        JSON.parse(response);
 
-    select.innerHTML = "";
+    const menu =
+        document.getElementById("playerDropdownMenu");
 
-    players.forEach(p => {
-        const option = document.createElement("option");
-        option.value = p.player_id;
-        option.textContent = p.name || p.player_id;
-        select.appendChild(option);
+    const button =
+        document.getElementById("playerDropdownBtn");
+
+    const hiddenInput =
+        document.getElementById("playerSelect");
+
+    menu.innerHTML = "";
+    hiddenInput.value = "";
+
+    if (!players.length) {
+
+        button.textContent = "Игроки не найдены";
+
+        return;
+    }
+
+    players.forEach((p, index) => {
+
+        const playerId =
+            p.player_id;
+
+        const label =
+            p.name || formatPlayerId(playerId);
+
+        const option =
+            document.createElement("div");
+
+        option.className = "custom-select-option";
+        option.dataset.playerId = playerId;
+        option.title = playerId;
+        option.textContent = label;
+
+        option.addEventListener("click", () => {
+
+            setSelectedPlayer(playerId, label);
+
+            closePlayerDropdown();
+        });
+
+        menu.appendChild(option);
+
+        if (index === 0) {
+            setSelectedPlayer(playerId, label);
+        }
     });
 }
 
 window.addEventListener("load", () => {
-    loadPlayers();
-});
 
+    const dropdownBtn =
+        document.getElementById("playerDropdownBtn");
+
+    const dropdownMenu =
+        document.getElementById("playerDropdownMenu");
+
+    dropdownBtn.addEventListener("click", (event) => {
+
+        event.stopPropagation();
+
+        dropdownMenu.classList.toggle("is-hidden");
+    });
+
+    document.addEventListener("click", () => {
+
+        closePlayerDropdown();
+    });
+
+    document.addEventListener("keydown", (event) => {
+
+        if (event.key === "Escape") {
+            closePlayerDropdown();
+        }
+    });
+});
 window.addEventListener("keydown", (event) => {
 
     if (event.ctrlKey && event.key === "d") {
@@ -381,9 +500,6 @@ console.log = function(message) {
 };
 
 
-const demoProject =
-    document.getElementById("demoProject");
-
 demoProject.addEventListener("click", () => {
 
     document
@@ -393,6 +509,12 @@ demoProject.addEventListener("click", () => {
     document
         .getElementById("dashboard-screen")
         .classList.add("active");
+
+    setTimeout(() => {
+        if (chart) {
+            chart.resize();
+        }
+    }, 150);
 });
 
 /* ---------- ANALYSIS MENU ---------- */
@@ -553,4 +675,11 @@ applySimulationBtn.addEventListener("click", () => {
     alert(
         "Simulation configuration applied"
     );
+});
+
+window.addEventListener("resize", () => {
+
+    if (chart) {
+        chart.resize();
+    }
 });

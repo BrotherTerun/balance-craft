@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BalanceCraft</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -86,11 +87,21 @@
                 Импортировать данные
             </button>
 
-            <div class="panel">
+            <div class="panel player-panel">
 
                 <label class="label">Игрок</label>
 
-                <select id="playerSelect" class="player-select"></select>
+                <div id="playerDropdown" class="custom-select">
+
+                    <button id="playerDropdownBtn" class="custom-select-btn">
+                        Выберите игрока
+                    </button>
+
+                    <div id="playerDropdownMenu" class="custom-select-menu is-hidden"></div>
+
+                    <input type="hidden" id="playerSelect">
+
+                </div>
 
             </div>
 
