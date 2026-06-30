@@ -27,10 +27,12 @@ from PySide6.QtWidgets import QFileDialog
 try:
     from backend.pipeline import run_pipeline
     from backend.progression_model import analyze_player, analyze_project_player
+    from backend.what_if_analysis import build_what_if_controls, apply_what_if_scenario
 except ImportError:
     # Fallback для запуска отдельных скриптов из backend/ или IDE.
     from pipeline import run_pipeline
     from progression_model import analyze_player, analyze_project_player
+    from what_if_analysis import build_what_if_controls, apply_what_if_scenario
 
 
 # Конфигурация подключения к MySQL
@@ -857,6 +859,66 @@ def evaluate_formula(expression, context):
         return 0.0
 
 
+
+def normalize_semantic_binding(binding):
+    """
+    Универсальный формат семантической привязки.
+
+    Старый формат был строкой: "events.event_data.value".
+    Новый формат хранит источник и, если источник относится к event_data,
+    список типов событий, из которых нужно брать значение.
+    """
+
+    if not binding:
+        return {
+            "source": "",
+            "event_types": [],
+            "aggregation": "sum"
+        }
+
+    if isinstance(binding, str):
+        return {
+            "source": binding,
+            "event_types": [],
+            "aggregation": "sum"
+        }
+
+    if isinstance(binding, dict):
+        event_types = binding.get("event_types") or binding.get("eventTypes") or []
+
+        if not isinstance(event_types, list):
+            event_types = []
+
+        return {
+            "source": str(binding.get("source") or binding.get("path") or ""),
+            "event_types": [str(item) for item in event_types if item],
+            "aggregation": str(binding.get("aggregation") or "sum")
+        }
+
+    return {
+        "source": "",
+        "event_types": [],
+        "aggregation": "sum"
+    }
+
+
+def get_binding_source(binding):
+    return normalize_semantic_binding(binding).get("source", "")
+
+
+def event_matches_scope(event, binding):
+    binding_spec = normalize_semantic_binding(binding)
+    event_types = set(binding_spec.get("event_types") or [])
+
+    if not event_types:
+        # Совместимость со старыми проектами: если фильтр типов событий ещё
+        # не задан, берём все события. Новый UI не позволит сохранить
+        # events.event_data.* без явного выбора event_type.
+        return True
+
+    return str(event.get("event_type") or "") in event_types
+
+
 def should_event_match_variable(event_type, variable_key):
 
     event_type = str(event_type or "").lower()
@@ -908,7 +970,10 @@ def read_path_from_event(event, path):
     return None
 
 
-def collect_binding_value(variable_key, path, session, events, duration_minutes):
+def collect_binding_value(variable_key, binding, session, events, duration_minutes):
+
+    binding_spec = normalize_semantic_binding(binding)
+    path = binding_spec.get("source", "")
 
     if not path:
         return []
@@ -934,7 +999,7 @@ def collect_binding_value(variable_key, path, session, events, duration_minutes)
         values = []
 
         for event in events:
-            if not should_event_match_variable(event.get("event_type"), variable_key):
+            if not event_matches_scope(event, binding_spec):
                 continue
 
             value = read_path_from_event(event, path)
@@ -948,6 +1013,7 @@ def collect_binding_value(variable_key, path, session, events, duration_minutes)
     # доступные поля, но в историческом пересчёте без связи с конкретным
     # событием/игроком возвращаем 0, чтобы формула не падала.
     return 0.0
+
 
 
 def build_formula_context(template, semantic_bindings, session, events):
@@ -970,11 +1036,11 @@ def build_formula_context(template, semantic_bindings, session, events):
 
     for variable in template.get("variables", []):
         key = variable.get("key")
-        path = semantic_bindings.get(key, "")
+        binding = semantic_bindings.get(key, "")
 
         context[key] = collect_binding_value(
             key,
-            path,
+            binding,
             session,
             events,
             duration_minutes
@@ -1111,6 +1177,17 @@ def recalculate_session_metrics(binding_config):
         conn.close()
 
 
+
+def normalize_binding_for_storage(raw_binding):
+    binding = normalize_semantic_binding(raw_binding)
+    source = binding.get("source", "")
+
+    if not str(source).startswith("events.event_data."):
+        binding["event_types"] = []
+
+    return binding
+
+
 def build_clean_binding_config(template_id, payload):
     """
     Собирает конфигурацию мастера строго по выбранному шаблону.
@@ -1135,9 +1212,11 @@ def build_clean_binding_config(template_id, payload):
         if not variable_key:
             continue
 
-        clean_bindings[variable_key] = raw_bindings.get(
-            variable_key,
-            ""
+        clean_bindings[variable_key] = normalize_binding_for_storage(
+            raw_bindings.get(
+                variable_key,
+                ""
+            )
         )
 
     clean_formulas = {}
@@ -1303,6 +1382,100 @@ class Backend(QObject):
             result,
             ensure_ascii=False
         )
+
+    @Slot(str, result=str)
+    def getWhatIfControls(self, project_id):
+        """
+        Подготавливает контролы What-if анализа по semantic_bindings
+        текущего проекта. На этом этапе БД только читается, прогноз ещё
+        не строится и исторические данные не изменяются.
+        """
+
+        project = get_project_by_id(project_id)
+
+        if not project:
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "Проект не найден",
+                    "controls": []
+                },
+                ensure_ascii=False
+            )
+
+        try:
+            result = build_what_if_controls(project)
+
+            return json.dumps(
+                result,
+                ensure_ascii=False
+            )
+
+        except Exception as e:
+            print("[WHAT-IF] Ошибка подготовки контролов:", e)
+
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "Не удалось подготовить параметры What-if анализа",
+                    "details": str(e),
+                    "controls": []
+                },
+                ensure_ascii=False
+            )
+
+
+    @Slot(str, str, str, result=str)
+    def applyWhatIfScenario(self, project_id, player_id, scenario_json):
+        """
+        Строит what-if прогноз продолжения графиков на будущие сессии.
+        Исторические данные и БД не изменяются: сценарий считается только
+        в памяти по текущим настройкам UI и semantic_bindings проекта.
+        """
+
+        project = get_project_by_id(project_id)
+
+        if not project:
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "Проект не найден",
+                    "scenario_datasets": []
+                },
+                ensure_ascii=False
+            )
+
+        try:
+            scenario_config = json.loads(scenario_json) if scenario_json else {}
+        except json.JSONDecodeError:
+            scenario_config = {}
+
+        try:
+            result = apply_what_if_scenario(
+                project=project,
+                player_id=player_id,
+                raw_config=scenario_config
+            )
+
+            return json.dumps(
+                result,
+                ensure_ascii=False
+            )
+
+        except Exception as e:
+            print("[WHAT-IF] Ошибка построения сценария:", e)
+
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "Не удалось построить What-if сценарий",
+                    "details": str(e),
+                    "scenario_datasets": []
+                },
+                ensure_ascii=False
+            )
+
+
 
     @Slot(result=str)
     def selectFolder(self):

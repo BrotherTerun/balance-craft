@@ -1,3 +1,6 @@
+console.log(window.ChartAnnotation);
+console.log(window["chartjs-plugin-annotation"]);
+
 let backend = null;
 let currentProject = null;
 let projectsCache = [];
@@ -7,8 +10,6 @@ let whatIfSliderHandlersBound = false;
 let lastAnalysisData = null;
 let lastWhatIfScenario = null;
 const SCENARIO_DATASET_PREFIX = "__what_if__";
-
-const APP_THEME_STORAGE_KEY = "balancecraft.ui.theme";
 
 // Единая палитра графиков. Без явного цвета Chart.js/QWebEngine
 // иногда рисует добавленные сценарные линии почти чёрными на тёмном фоне.
@@ -374,8 +375,8 @@ function renderPracticalInsights(data) {
 
         container.innerHTML = `
             <div class="insight-empty">
-                Для текущего набора данных нет уверенных практических выводов.
-                Проверьте выбранный шаблон, семантические привязки и объём импортированных сессий.
+                Backend не вернул практических выводов для текущего анализа.
+                Проверьте, что выбран шаблон, рассчитаны session_metrics и построены графики.
             </div>
         `;
 
@@ -421,6 +422,8 @@ new QWebChannel(qt.webChannelTransport, async function(channel) {
         addLog(message);
     });
 
+    console.log("WebChannel подключен");
+
     await loadProjects();
     await loadPlayers();
 });
@@ -431,13 +434,17 @@ const annotationPlugin =
     window.ChartAnnotation ||
     window['chartjs-plugin-annotation'];
 
+console.log(annotationPlugin);
+
 if (annotationPlugin) {
 
     Chart.register(annotationPlugin);
 
+    console.log("Annotation plugin loaded");
+
 } else {
 
-    console.warn("Модуль отметок нестабильности не загружен");
+    console.error("Annotation plugin NOT loaded");
 }
 
 function buildAnnotations(points) {
@@ -463,6 +470,8 @@ function buildAnnotations(points) {
             }
         };
     });
+
+    console.log("BIF POINTS:", points);
 
     return annotations;
 }
@@ -502,7 +511,7 @@ let chart = new Chart(ctx, {
 
 async function analyzePlayer() {
     if (!backend) {
-        alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+        alert("Backend не готов");
         return;
     }
 
@@ -528,6 +537,8 @@ async function analyzePlayer() {
     }
 
     const data = JSON.parse(response);
+
+    console.log(data);
 
     if (data.scope === "all_players_average") {
         addLog("[ANALYSIS] Построена средняя траектория по всем игрокам");
@@ -673,7 +684,7 @@ saveMetricsBtn.addEventListener("click", () => {
         updateChartLabels();
     }
     catch (TypeError) {
-        addLog("Не удалось применить подписи метрик к текущему графику")
+        addLog("Произошла ошибка: Невозможно задать свойства для undefined (объект 'label')")
     }
     finally {
         document
@@ -875,7 +886,7 @@ const openProjectBtn =
 newProjectBtn.addEventListener("click", async () => {
 
     if (!backend) {
-        alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+        alert("Backend не готов");
         return;
     }
 
@@ -922,68 +933,6 @@ analysisBtn.addEventListener("click", () => {
     analysisMenu.classList.toggle("is-hidden");
 });
 
-function updateThemeToggleButton(theme) {
-    const themeToggleBtn = document.getElementById("themeToggleBtn");
-
-    if (!themeToggleBtn) {
-        return;
-    }
-
-    themeToggleBtn.textContent = theme === "light"
-        ? "Тёмная тема"
-        : "Светлая тема";
-}
-
-function applyAppTheme(theme, shouldPersist = true) {
-    const normalizedTheme = theme === "light" ? "light" : "dark";
-
-    document.body.classList.toggle("theme-light", normalizedTheme === "light");
-    document.body.dataset.theme = normalizedTheme;
-    updateThemeToggleButton(normalizedTheme);
-
-    if (shouldPersist) {
-        try {
-            localStorage.setItem(APP_THEME_STORAGE_KEY, normalizedTheme);
-        }
-        catch (error) {
-            console.warn("Не удалось сохранить тему интерфейса", error);
-        }
-    }
-}
-
-function initThemeToggle() {
-    let savedTheme = "dark";
-
-    try {
-        savedTheme = localStorage.getItem(APP_THEME_STORAGE_KEY) || "dark";
-    }
-    catch (error) {
-        savedTheme = "dark";
-    }
-
-    applyAppTheme(savedTheme, false);
-
-    const themeToggleBtn = document.getElementById("themeToggleBtn");
-
-    if (!themeToggleBtn) {
-        return;
-    }
-
-    themeToggleBtn.addEventListener("click", () => {
-        const nextTheme = document.body.classList.contains("theme-light")
-            ? "dark"
-            : "light";
-
-        applyAppTheme(nextTheme, true);
-
-        if (analysisMenu) {
-            analysisMenu.classList.add("is-hidden");
-        }
-    });
-}
-
-initThemeToggle();
-
 /* ---------- MODALS ---------- */
 
 function openModal(id) {
@@ -997,7 +946,7 @@ function openModal(id) {
 
     if (!modal) {
         console.error(`Модальное окно ${id} не найдено в index.html`);
-        alert("Не удалось открыть нужное окно интерфейса.");
+        alert(`Ошибка UI: не найдено окно ${id}`);
         return;
     }
 
@@ -1068,19 +1017,19 @@ function openSourceModal() {
 
     if (!sourceModal) {
         console.error("sourceModal не найден в index.html");
-        alert("Не удалось открыть окно источника событий.");
+        alert("Ошибка UI: не найдено окно источника событий");
         return;
     }
 
     if (!sourceFolderPath) {
         console.error("sourceFolderPath не найден в index.html");
-        alert("Не удалось отобразить путь к источнику событий.");
+        alert("Ошибка UI: не найдено поле пути источника событий");
         return;
     }
 
     if (!resultBox) {
         console.error("sourceImportResult не найден в index.html");
-        alert("Не удалось показать результат импорта.");
+        alert("Ошибка UI: не найден блок результата импорта");
         return;
     }
 
@@ -1880,8 +1829,8 @@ function renderBindingFormulaDraft() {
 
     root.innerHTML = `
         <div class="binding-info-note">
-            Формулы задают способ расчёта метрик выбранного шаблона.
-            Изменяйте их только если сохраняется смысл соответствующей метрики.
+            Сейчас значения остаются черновиком UI. На следующих подпунктах добавим сохранение
+            formula_config и перерасчёт метрик по пользовательским формулам.
         </div>
         <div class="binding-config-list">
             ${metricsHtml || "<div class='binding-empty'>У выбранного шаблона нет метрик.</div>"}
@@ -2305,7 +2254,7 @@ function setBindingStep(step) {
 async function loadBindingWizardData() {
 
     if (!backend) {
-        showBindingStatus("error", "Внутренние службы приложения ещё не готовы. Повторите действие через несколько секунд.");
+        showBindingStatus("error", "Backend недоступен.");
         return;
     }
 
@@ -2358,7 +2307,7 @@ async function loadBindingWizardData() {
 
         showBindingStatus(
             "error",
-            `<strong>Не удалось загрузить мастер семантики</strong><br>${escapeHtml(error)}`
+            `<strong>Ошибка загрузки Binding Wizard</strong><br>${escapeHtml(error)}`
         );
     }
 }
@@ -2538,7 +2487,7 @@ async function saveBindingWizardDraft() {
 
         showBindingStatus(
             "error",
-            `<strong>Не удалось сохранить настройки семантики</strong><br>${escapeHtml(error)}`
+            `<strong>Ошибка сохранения Binding Wizard</strong><br>${escapeHtml(error)}`
         );
     }
 }
@@ -2602,7 +2551,7 @@ bindClick("sourceBrowseBtn", async () => {
 
         if (!backend) {
 
-            alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+            alert("Backend недоступен");
             return;
         }
 
@@ -2643,7 +2592,7 @@ bindClick("sourceImportBtn", async () => {
 
         if (!backend) {
 
-            alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+            alert("Backend недоступен");
             return;
         }
 
@@ -2682,6 +2631,8 @@ bindClick("sourceImportBtn", async () => {
                 );
 
             const result = JSON.parse(response);
+
+            console.log(result);
 
             if (result.success) {
 
@@ -2739,7 +2690,7 @@ bindClick("sourceImportBtn", async () => {
             showSourceImportResult(
                 "error",
                 `
-                <strong>Не удалось обработать результат импорта</strong><br>
+                <strong>Ошибка обработки ответа backend</strong><br>
                 ${error}
                 `
             );
@@ -2864,7 +2815,7 @@ async function loadWhatIfParameters() {
     if (!backend) {
         setWhatIfStatus(
             "error",
-            "Внутренние службы приложения ещё загружаются. Повторите попытку через несколько секунд."
+            "Backend ещё не готов. Повторите попытку после загрузки проекта."
         );
         return;
     }
@@ -2969,7 +2920,7 @@ function renderWhatIfControls(data) {
     setWhatIfStatus(
         "success",
         `Подготовлено источников: <strong>${summary.editable_sources_count || 0}</strong>; `
-        + `параметров справочников: <strong>${summary.entity_controls_count || 0}</strong>; `
+        + `ползунков сущностей: <strong>${summary.entity_controls_count || 0}</strong>; `
         + `шаблон: <strong>${escapeHtml(data.template_id || "не выбран")}</strong>.`
     );
 
@@ -2979,7 +2930,7 @@ function renderWhatIfControls(data) {
             <div class="whatif-control-group">
                 <h3>Нет доступных параметров</h3>
                 <p class="whatif-control-message">
-                    В проекте пока нет сохранённых семантических привязок.
+                    В проекте пока нет сохранённых semantic_bindings.
                     Пройдите мастер семантики и назначьте источники переменным шаблона.
                 </p>
             </div>
@@ -3056,7 +3007,7 @@ function renderWhatIfEntityGroup(control) {
         .join("");
 
     const moreNote = rows.length > 60
-        ? `<div class="whatif-more-note">Показаны первые 60 сущностей из ${rows.length}. Для демонстрации доступны наиболее значимые записи справочника.</div>`
+        ? `<div class="whatif-more-note">Показаны первые 60 сущностей из ${rows.length}. Остальные будут учитываться на следующем этапе после добавления фильтра/поиска.</div>`
         : "";
 
     return `
@@ -3423,7 +3374,7 @@ function renderWhatIfScenarioInsights(data) {
         panel.classList.remove("is-hidden");
         list.innerHTML = `
             <div class="insight-empty">
-                Сценарий построен. Для выбранных параметров нет дополнительных предупреждений.
+                Сценарий построен, но backend не вернул отдельных выводов.
             </div>
         `;
         return;
@@ -3491,7 +3442,7 @@ async function forecastWhatIfScenario() {
     const config = collectWhatIfScenarioConfig();
 
     if (!config.controls.length) {
-        alert("Нет доступных параметров What-if для прогноза");
+        alert("Нет доступных what-if параметров для прогноза");
         return;
     }
 
