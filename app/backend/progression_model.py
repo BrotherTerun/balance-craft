@@ -29,11 +29,9 @@ ALL_PLAYERS_ID = "__ALL_PLAYERS__"
 
 TEMPLATE_METRICS = {
     "progression_decay": [
-        "Y_EXP_VELOCITY",
-        "K_POWER_SCORE",
-        "S_UNSPENT_RESOURCES",
-        "D_PROGRESSION_DECAY",
-        "A_PROGRESSION_ROI"
+        "EV",
+        "PGR",
+        "DR"
     ],
     "resource_flow": [
         "RF_RESOURCE_FLOW",
@@ -54,6 +52,10 @@ TEMPLATE_METRICS = {
 
 
 DEFAULT_METRIC_LABELS = {
+    "EV": "Скорость прогрессии",
+    "PGR": "Темп роста силы",
+    "DR": "Деградация прогрессии",
+    # Legacy-названия оставлены только для чтения старых projects.json/session_metrics.
     "Y_EXP_VELOCITY": "Скорость прогрессии",
     "K_POWER_SCORE": "Условная сила игрока",
     "S_UNSPENT_RESOURCES": "Доля неиспользованных ресурсов",
@@ -61,16 +63,13 @@ DEFAULT_METRIC_LABELS = {
     "A_PROGRESSION_ROI": "Эффективность вложений в прогрессию",
     "RF_RESOURCE_FLOW": "Чистый ресурсный поток",
     "SSR_SPEND_SHARE": "Доля расхода",
-    "RI_RESOURCE_INFLATION": "Темп накопления ресурса",
+    "RI_RESOURCE_INFLATION": "Изменение ресурса",
     "PE_PROGRESSION_EFFICIENCY": "Эффективность прогрессии",
     "ROI_RESOURCE_TO_POWER": "ROI ресурсов в силу",
     "POWER_COST": "Стоимость единицы силы",
     "APM_ACTIONS_PER_MINUTE": "Интенсивность действий",
     "TIME_EFFICIENCY": "Эффективность времени",
     "GRIND_FACTOR": "Гринд-фактор",
-    "EV": "EV",
-    "PGR": "PGR",
-    "DR": "DR",
     "K": "K(t)",
     "Y": "Y(t)"
 }
@@ -383,7 +382,8 @@ def detect_bifurcations(values):
 
 def choose_primary_series(metric_order, values_by_metric):
     preferred = [
-        "Y_EXP_VELOCITY",
+        "EV",
+        "PGR",
         "RF_RESOURCE_FLOW",
         "ROI_RESOURCE_TO_POWER",
         "TIME_EFFICIENCY",
@@ -500,9 +500,9 @@ def analyze_project_player(project, player_id):
             # Совместимость со старым UI/отладкой.
             "K": values_by_metric.get("K_POWER_SCORE", []),
             "Y": values_by_metric.get("Y_EXP_VELOCITY", []),
-            "EV": values_by_metric.get("Y_EXP_VELOCITY", []),
-            "PGR": calc_pgr(values_by_metric.get("K_POWER_SCORE", [])) if values_by_metric.get("K_POWER_SCORE") else [],
-            "DR": calc_dr(values_by_metric.get("K_POWER_SCORE", [])) if values_by_metric.get("K_POWER_SCORE") else []
+            "EV": values_by_metric.get("EV") or values_by_metric.get("Y_EXP_VELOCITY", []),
+            "PGR": values_by_metric.get("PGR") or (calc_pgr(values_by_metric.get("K_POWER_SCORE", [])) if values_by_metric.get("K_POWER_SCORE") else []),
+            "DR": values_by_metric.get("DR") or (calc_dr(values_by_metric.get("K_POWER_SCORE", [])) if values_by_metric.get("K_POWER_SCORE") else [])
         }
 
     except Exception as e:

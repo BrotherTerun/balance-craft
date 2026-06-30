@@ -1,9 +1,9 @@
 """
-Подготовка источников и контролов для What-if анализа BalanceCraft.
+Подготовка источников, контролов и сценарного прогноза для What-if анализа BalanceCraft.
 
-P7.1 не строит прогноз и не изменяет базу данных. Модуль только читает
-семантические привязки проекта и подбирает изменяемые параметры, которые
-могут влиять на выбранные пользователем переменные шаблона.
+Модуль читает семантические привязки проекта, подбирает изменяемые
+параметры и строит будущие точки сценария без изменения исторических
+данных и записей базы данных.
 """
 
 import json
@@ -49,7 +49,10 @@ VARIABLE_LABELS = {
         "flow_in": "Входящий поток прогрессии",
         "flow_out": "Расход / потери прогрессии",
         "duration": "Длительность окна анализа",
-        "engagement": "Активность игрока"
+        "previous_power": "Сила до начала сессии",
+        "current_power": "Сила на конец сессии",
+        "delta_power": "Изменение силы за сессию",
+        "net_progress": "Чистый прирост прогрессии"
     },
     "resource_flow": {
         "resource_income": "Доход ресурса",
@@ -266,61 +269,8 @@ def classify_source_path(source_path):
 
 
 FORMULA_FUNCTION_NAMES = {
-    "sum", "count", "max", "min", "abs"
+    "sum", "count", "max", "min", "abs", "sqrt", "log", "pow", "round"
 }
-
-
-def event_matches_variable(event_type, variable_key):
-    """
-    Отделяет одно и то же числовое поле event_data.value по смыслу переменной.
-
-    В пресетной настройке несколько переменных могут ссылаться на один путь
-    events.event_data.value. Без фильтрации flow_in и flow_out получают одну и
-    ту же среднюю базу, поэтому what-if прогноз почти не реагирует на ползунки.
-    Здесь мы используем тип события как минимальный семантический фильтр.
-    """
-
-    event_type = str(event_type or "").lower()
-    variable_key = str(variable_key or "").lower()
-
-    income_like_variables = {
-        "flow_in",
-        "resource_income",
-        "power_gain",
-        "reward"
-    }
-
-    spend_like_variables = {
-        "flow_out",
-        "resource_spend",
-        "resource_cost"
-    }
-
-    if variable_key in income_like_variables:
-        return any(marker in event_type for marker in (
-            "gain",
-            "income",
-            "reward",
-            "earn",
-            "loot",
-            "equip",
-            "learn",
-            "upgrade",
-            "power"
-        ))
-
-    if variable_key in spend_like_variables:
-        return any(marker in event_type for marker in (
-            "spend",
-            "cost",
-            "purchase",
-            "buy",
-            "loss",
-            "decay",
-            "out"
-        ))
-
-    return True
 
 
 def extract_formula_names(expression):
@@ -906,8 +856,37 @@ def build_event_signal_control(cursor, variable_key, variable_label, source_path
 
 
 
+DERIVED_COMPUTED_SIGNALS = {
+    "previous_power",
+    "current_power",
+    "delta_power",
+    "net_progress",
+    "progress_gain",
+    "progress_loss",
+    "previous_resource",
+    "current_resource",
+    "resource_delta",
+    "net_resource"
+}
+
+
 def build_computed_signal_control(cursor, variable_key, variable_label, source_path, source_info):
     field_name = source_info.get("field")
+
+    if field_name in DERIVED_COMPUTED_SIGNALS:
+        return {
+            "type": "unsupported",
+            "variable_key": variable_key,
+            "variable_label": variable_label,
+            "source_path": source_path,
+            "source_kind": "computed_signal",
+            "message": (
+                "Это производная расчётная величина. Она используется внутри формул "
+                "и пересчёта метрик, но не является самостоятельным what-if рычагом. "
+                "Изменяйте базовые потоки, из которых она рассчитывается."
+            )
+        }
+
     profile = get_computed_signal_expectation(cursor, field_name)
 
     control = build_multiplier_control(
@@ -1104,7 +1083,7 @@ def build_what_if_controls(project):
         conn.close()
 
 
-# ===== P7.2: сценарное прогнозирование =====
+# ===== Сценарное прогнозирование =====
 
 SCENARIO_DATASET_PREFIX = "__what_if__"
 DEFAULT_FORECAST_HORIZON = 5
@@ -1256,14 +1235,31 @@ def derive_forecast_base_context(template_id, historical_values, controls):
     if template_id == "progression_decay":
         duration = max(to_float(bases.get("duration"), 1.0), 1.0)
 
-        recent_y = mean_tail(historical_values.get("Y_EXP_VELOCITY"), 3)
-        recent_decay = mean_tail(historical_values.get("D_PROGRESSION_DECAY"), 3)
+        recent_ev = mean_tail(
+            historical_values.get("EV") or historical_values.get("Y_EXP_VELOCITY"),
+            3
+        )
+        recent_pgr = mean_tail(historical_values.get("PGR"), 3)
+        recent_dr = mean_tail(
+            historical_values.get("DR") or historical_values.get("D_PROGRESSION_DECAY"),
+            3
+        )
 
-        if abs(recent_y) > EPSILON:
-            bases["flow_in"] = max(recent_y * duration, 0.0)
+        if abs(recent_ev) > EPSILON:
+            bases["flow_in"] = max(recent_ev * duration, 0.0)
 
-        if abs(recent_decay) > EPSILON:
-            bases["flow_out"] = max(recent_decay * duration, 0.0)
+        # DR = потери / текущая сила. Если текущая сила неизвестна явно,
+        # оцениваем её через отношение потока прогрессии к деградации.
+        estimated_power = 0.0
+        if abs(recent_dr) > EPSILON and bases.get("flow_in"):
+            estimated_power = max(to_float(bases.get("flow_in")) / max(recent_dr, EPSILON), 1.0)
+
+        if estimated_power <= EPSILON and abs(recent_pgr) > EPSILON:
+            estimated_power = max(abs(recent_pgr) * duration * 3, 1.0)
+
+        if estimated_power > EPSILON:
+            bases["current_power"] = estimated_power
+            bases["flow_out"] = max(recent_dr * estimated_power, 0.0)
 
     return bases
 
@@ -1366,8 +1362,7 @@ def build_scenario_variable_context(project, scenario_config, historical_values=
     """
     Собирает будущие значения переменных выбранного шаблона.
 
-    P7.2 statistical hotfix:
-    вместо одной константы для всего горизонта функция строит по каждой
+    Вместо одной константы для всего горизонта функция строит по каждой
     переменной прогнозный временной ряд. Для событийных и computed-сигналов
     базой служит оценка мат. ожидания сессионного ряда, ожидаемое изменение
     между сессиями и оценка разброса. Для справочников items/skills значение
@@ -1466,6 +1461,9 @@ def build_scenario_variable_context(project, scenario_config, historical_values=
                 "entities_count": len(values)
             })
 
+    for derived_key, derived_value in forecast_base_context.items():
+        context.setdefault(derived_key, derived_value)
+
     return context, context_series, applied_controls, controls_result
 
 
@@ -1490,16 +1488,20 @@ def calculate_future_point(template_id, context, previous_values):
         flow_out = max(to_float(context.get("flow_out")), 0.0)
         duration = max(to_float(context.get("duration"), 1.0), 1.0)
 
-        previous_k = get_last_value(previous_values.get("K_POWER_SCORE"), 0.0)
-        net_progress = flow_in - flow_out
-        next_k = max(previous_k + net_progress, 0.0)
+        previous_power = get_last_value(
+            previous_values.get("__CURRENT_POWER"),
+            to_float(context.get("current_power"), 0.0)
+        )
+        delta_power_raw = flow_in - flow_out
+        current_power = max(previous_power + delta_power_raw, 0.0)
+        delta_power = current_power - previous_power
+
+        previous_values.setdefault("__CURRENT_POWER", []).append(current_power)
 
         return {
-            "Y_EXP_VELOCITY": safe_div(flow_in, duration),
-            "K_POWER_SCORE": next_k,
-            "S_UNSPENT_RESOURCES": safe_div(net_progress, flow_in),
-            "D_PROGRESSION_DECAY": safe_div(flow_out, duration),
-            "A_PROGRESSION_ROI": safe_div(next_k - previous_k, flow_out)
+            "EV": safe_div(flow_in, duration),
+            "PGR": safe_div(delta_power, duration),
+            "DR": safe_div(flow_out, max(current_power, 1.0))
         }
 
     if template_id == "resource_flow":
@@ -1507,10 +1509,19 @@ def calculate_future_point(template_id, context, previous_values):
         spend = max(to_float(context.get("resource_spend")), 0.0)
         net_resource = income - spend
 
+        previous_resource = get_last_value(
+            previous_values.get("__CURRENT_RESOURCE"),
+            to_float(context.get("current_resource"), 0.0)
+        )
+        current_resource = max(previous_resource + net_resource, 0.0)
+        resource_delta = current_resource - previous_resource
+
+        previous_values.setdefault("__CURRENT_RESOURCE", []).append(current_resource)
+
         return {
             "RF_RESOURCE_FLOW": net_resource,
             "SSR_SPEND_SHARE": safe_div(spend, income),
-            "RI_RESOURCE_INFLATION": safe_div(net_resource, income)
+            "RI_RESOURCE_INFLATION": safe_div(resource_delta, max(previous_resource, 1.0))
         }
 
     if template_id == "resource_conversion":
@@ -1519,7 +1530,7 @@ def calculate_future_point(template_id, context, previous_values):
         action_count = max(to_float(context.get("action_count")), 1.0)
 
         return {
-            "PE_PROGRESSION_EFFICIENCY": safe_div(power_gain, action_count),
+            "PE_PROGRESSION_EFFICIENCY": safe_div(power_gain, resource_cost),
             "ROI_RESOURCE_TO_POWER": safe_div(power_gain, resource_cost),
             "POWER_COST": safe_div(resource_cost, max(power_gain, 1.0))
         }

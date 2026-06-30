@@ -221,70 +221,72 @@ def _add_progression_decay_insights(
     values_by_metric: Dict[str, Sequence[float]],
     metric_labels: Dict[str, str]
 ) -> None:
-    y = _series(values_by_metric.get("Y_EXP_VELOCITY", []))
-    k = _series(values_by_metric.get("K_POWER_SCORE", []))
-    unspent = _series(values_by_metric.get("S_UNSPENT_RESOURCES", []))
-    decay = _series(values_by_metric.get("D_PROGRESSION_DECAY", []))
-    roi = _series(values_by_metric.get("A_PROGRESSION_ROI", []))
+    """
+    Интерпретация шаблона из таблицы 1.2:
+    EV = опыт / время, PGR = прирост силы / время, DR = потери / текущая сила.
+    Legacy-ключи старого прототипа читаются только как fallback.
+    """
 
-    if len(y) >= 2 and _relative_change(y) < -0.20:
+    ev = _series(values_by_metric.get("EV") or values_by_metric.get("Y_EXP_VELOCITY", []))
+    pgr = _series(values_by_metric.get("PGR", []))
+    dr = _series(values_by_metric.get("DR") or values_by_metric.get("D_PROGRESSION_DECAY", []))
+
+    if len(ev) >= 2 and _relative_change(ev) < -0.20:
         insights.append(_make_insight(
             "warning",
             "template",
             "Скорость прогрессии снижается",
-            "Игроки получают меньше прогресса за сессию к концу наблюдаемого периода.",
+            "Игроки получают меньше прогресса за единицу времени к концу наблюдаемого периода.",
             "Проверьте поздние награды, требования к развитию и возможные участки, где прогресс становится слишком медленным.",
-            ["Y_EXP_VELOCITY"],
-            f"Тренд метрики «{_metric_label('Y_EXP_VELOCITY', metric_labels)}»: {_trend_label(_relative_change(y))}."
+            ["EV"],
+            f"Тренд метрики «{_metric_label('EV', metric_labels)}»: {_trend_label(_relative_change(ev))}."
         ))
 
-    if len(k) >= 4:
-        first_half = k[:max(1, len(k) // 2)]
-        second_half = k[len(k) // 2:]
-        if _abs_mean(second_half) > 0 and abs(_mean(second_half) - _mean(first_half)) / max(_abs_mean(k), 1.0) < 0.08:
+    if len(pgr) >= 2 and _relative_change(pgr) < -0.20:
+        insights.append(_make_insight(
+            "warning",
+            "template",
+            "Темп роста силы падает",
+            "Прирост силы игрока за сессию становится ниже относительно начала наблюдаемого периода.",
+            "Сопоставьте этот участок с ценами улучшений, доступностью предметов, навыков и требованиями к дальнейшему развитию.",
+            ["PGR"],
+            f"Тренд метрики «{_metric_label('PGR', metric_labels)}»: {_trend_label(_relative_change(pgr))}."
+        ))
+
+    if len(pgr) >= 4:
+        second_half = pgr[len(pgr) // 2:]
+        if _abs_mean(second_half) < max(_abs_mean(pgr) * 0.18, 0.01):
             insights.append(_make_insight(
                 "info",
                 "template",
                 "Рост силы выходит на плато",
-                "Средняя сила игрока почти не меняется во второй части наблюдаемого периода.",
-                "Проверьте, предусмотрены ли в этой зоне новые источники развития или осознанное замедление прогрессии.",
-                ["K_POWER_SCORE"],
-                f"Среднее изменение относительно масштаба ряда ниже 8%."
+                "Во второй части наблюдаемого периода темп роста силы близок к нулю.",
+                "Проверьте, является ли это ожидаемым замедлением прогрессии или признаком нехватки новых источников развития.",
+                ["PGR"],
+                f"Средний темп роста силы во второй половине: {_format_number(_mean(second_half))}."
             ))
 
-    if unspent and _mean(unspent) > 0.50:
+    if len(dr) >= 2 and _relative_change(dr) > 0.20:
         insights.append(_make_insight(
             "warning",
             "template",
-            "Игроки накапливают значительную часть ресурса",
-            "Доля неиспользованных ресурсов остаётся высокой, что может указывать на слабую мотивацию к расходованию.",
-            "Проверьте ценность доступных улучшений, цены предметов и наличие ресурсных sink-механик.",
-            ["S_UNSPENT_RESOURCES"],
-            f"Среднее значение: {_format_number(_mean(unspent))}."
+            "Деградация прогрессии усиливается",
+            "Доля потерь относительно текущей силы игрока растёт к концу наблюдаемого периода.",
+            "Проверьте штрафы, износ, смерти или другие механики потерь: возможно, они начинают слишком сильно подавлять развитие.",
+            ["DR"],
+            f"Тренд метрики «{_metric_label('DR', metric_labels)}»: {_trend_label(_relative_change(dr))}."
         ))
 
-    if decay and _mean(decay) > 0.0 and _last_non_null(decay) > _mean(decay) * 1.25:
+    if len(dr) >= 3 and _mean(dr[-3:]) > 0.45:
         insights.append(_make_insight(
-            "warning",
+            "danger",
             "template",
-            "Потери прогрессии усиливаются к концу ряда",
-            "Показатель деградации прогрессии в последних сессиях выше среднего уровня.",
-            "Проверьте штрафы, потери, износ, смерть персонажа или другие механики отката прогресса.",
-            ["D_PROGRESSION_DECAY"],
-            f"Последнее значение: {_format_number(_last_non_null(decay))}; среднее: {_format_number(_mean(decay))}."
+            "Высокая доля потерь прогрессии",
+            "В последних сессиях потери составляют значительную часть текущей силы игрока.",
+            "Проверьте, не превращаются ли штрафы в барьер прогрессии, особенно после смертей, неудачных попыток или дорогих улучшений.",
+            ["DR"],
+            f"Среднее значение DR за последние сессии: {_format_number(_mean(dr[-3:]))}."
         ))
-
-    if len(roi) >= 2 and _relative_change(roi) < -0.20:
-        insights.append(_make_insight(
-            "warning",
-            "template",
-            "Эффективность вложений снижается",
-            "Расход ресурсов всё хуже конвертируется в рост прогрессии или силы.",
-            "Проверьте кривую стоимости улучшений и убедитесь, что поздние траты дают игроку ощущаемую пользу.",
-            ["A_PROGRESSION_ROI"],
-            f"Тренд ROI: {_trend_label(_relative_change(roi))}."
-        ))
-
 
 def _add_resource_flow_insights(
     insights: List[Dict[str, object]],

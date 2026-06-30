@@ -2218,7 +2218,7 @@ button:disabled {
 }
 
 
-/* ===== QWEBENGINE RENDER / SCROLL HOTFIX ===== */
+/* ===== QWEBENGINE RENDER STABILITY ===== */
 /*
    Qt WebEngine on some Windows GPU drivers can lose compositor layers while
    scrolling a fixed modal over a Chart.js canvas. During modal work we simplify
@@ -2352,7 +2352,7 @@ body.modal-open button:hover {
 }
 
 
-/* ===== BINDING WIZARD CONTENT HOTFIX ===== */
+/* ===== BINDING WIZARD CONTENT ===== */
 
 .binding-template-tooltip {
     display: none !important;
@@ -2407,7 +2407,7 @@ body.modal-open button:hover {
     font-size: 12px;
 }
 
-/* ===== P4.5 EVENT-TYPE SCOPED BINDING ===== */
+/* ===== EVENT-TYPE SCOPED BINDING ===== */
 
 .binding-event-scope {
     width: 100%;
@@ -2487,12 +2487,10 @@ body.modal-open button:hover {
 }
 
 
-/* ===== P4.5 HOTFIX: EVENT TYPE CHECKBOX VISIBILITY ===== */
+/* ===== EVENT TYPE CHECKBOX VISIBILITY ===== */
 /*
-   Общие правила .binding-config-row input задавали min-width и flex для всех
-   input внутри строки мастера. Из-за этого checkbox в списке event_type
-   растягивался на всю карточку и вытеснял подпись события. Здесь точечно
-   возвращаем чекбоксам нормальный размер и явно подсвечиваем текст event_type.
+   Чекбоксы в списке event_type получают собственные размеры, чтобы
+   общие правила полей ввода не вытесняли текст подписи события.
 */
 .binding-event-type-option {
     justify-content: flex-start;
@@ -2690,406 +2688,231 @@ body.theme-light *::-webkit-scrollbar-thumb {
     border-color: rgba(255,255,255,0.9);
 }
 
-/* ===== P8.1 READABILITY + LIGHT THEME COMPLETION ===== */
-/*
-   Theme switching is intentionally CSS-only. We do not touch Chart.js runtime
-   options here: this avoids the _scriptable recursion issue in QWebEngine.
-*/
-
-:root {
-    --text-main: #f7f9ff;
-    --text-muted: #d3dbea;
-    --text-dim: #a8b4c8;
-    --border: rgba(255,255,255,0.18);
-    --border-strong: rgba(255,255,255,0.32);
+/* ===== FINAL LAYOUT STABILITY AND RESPONSIVE GUARD ===== */
+#dashboard-screen,
+.dashboard-layout,
+.topbar,
+.chart-container,
+.metrics-panel,
+.whatif-panel,
+.modal-overlay,
+.modal-window {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
-body.theme-light {
-    --bg-main: #f5f7fb;
-    --bg-secondary: #edf2f8;
-    --bg-card: rgba(255,255,255,0.96);
-    --bg-hover: rgba(239,246,255,0.98);
-
-    --border: rgba(15,23,42,0.16);
-    --border-strong: rgba(15,23,42,0.28);
-
-    --text-main: #111827;
-    --text-muted: #334155;
-    --text-dim: #64748b;
-
-    --accent: #2563eb;
-    --accent-hover: #1d4ed8;
-
-    --success: #15803d;
-    --warning: #b45309;
-    --danger: #dc2626;
-
-    --shadow: 0 14px 36px rgba(15,23,42,0.12);
-    --blur: none;
-
-    background:
-        radial-gradient(circle at top left,
-        #ffffff 0%,
-        #f5f7fb 48%,
-        #e8eef7 100%) !important;
-
-    color: var(--text-main) !important;
+.dashboard-layout,
+.chart-container,
+.metrics-panel,
+.whatif-panel {
+    contain: layout paint;
 }
 
-body.theme-light #project-screen {
-    background:
-        radial-gradient(circle at top,
-        #ffffff 0%,
-        #f3f7fc 70%,
-        #e8eef7 100%) !important;
+body.ui-render-stabilizing .dashboard-layout,
+body.ui-render-stabilizing .chart-container,
+body.ui-render-stabilizing .metrics-panel,
+body.ui-render-stabilizing .whatif-panel,
+body.ui-render-stabilizing .modal-window {
+    transform: translateZ(0);
 }
 
-body.theme-light #dashboard-screen,
-body.theme-light .dashboard-layout {
-    background: #f5f7fb !important;
-    color: var(--text-main) !important;
+body.ui-render-stabilizing .chart-container,
+body.ui-render-stabilizing .metrics-panel,
+body.ui-render-stabilizing .whatif-panel {
+    transition-duration: 0.01ms !important;
 }
 
-body.theme-light .topbar {
-    background: rgba(248,250,252,0.98) !important;
-    border-bottom-color: rgba(15,23,42,0.14) !important;
-    box-shadow: 0 8px 28px rgba(15,23,42,0.08);
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+@media (max-width: 1360px) {
+    html {
+        font-size: clamp(12px, 0.9vw, 15px);
+    }
+
+    .topbar {
+        gap: 10px;
+        padding: 10px 14px;
+    }
+
+    .player-panel {
+        flex-basis: 260px;
+        min-width: 220px;
+    }
+
+    .metrics-panel {
+        width: clamp(250px, 22vw, 320px);
+        flex-basis: clamp(250px, 22vw, 320px);
+        min-width: 240px;
+        padding: 14px;
+    }
+
+    .whatif-panel {
+        flex-basis: clamp(300px, 26vw, 380px);
+        min-width: 280px;
+        max-width: 400px;
+    }
+
+    .chart-container {
+        padding: 12px;
+    }
 }
 
-body.theme-light .panel,
-body.theme-light .metric-card,
-body.theme-light .future-card,
-body.theme-light .whatif-param,
-body.theme-light .metrics-panel,
-body.theme-light .project-card,
-body.theme-light .template-card,
-body.theme-light .binding-step-panel,
-body.theme-light .binding-field-row,
-body.theme-light .binding-variable-row,
-body.theme-light .binding-metric-row,
-body.theme-light .binding-config-row,
-body.theme-light .binding-overview-row,
-body.theme-light .binding-template-card,
-body.theme-light .binding-template-summary,
-body.theme-light .binding-summary-card,
-body.theme-light .binding-info-note,
-body.theme-light .binding-empty,
-body.theme-light .whatif-control-group,
-body.theme-light .whatif-horizon-row,
-body.theme-light .source-modal-field,
-body.theme-light .import-result {
-    background: rgba(255,255,255,0.96) !important;
-    border-color: var(--border) !important;
-    color: var(--text-main) !important;
-    box-shadow: var(--shadow);
+@media (max-width: 1120px) {
+    .topbar {
+        align-items: stretch;
+    }
+
+    #analysisBtn,
+    #whatIfBtn,
+    #runBtn {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .player-panel {
+        flex: 1 1 240px;
+        max-width: none;
+    }
+
+    .dashboard-layout {
+        min-width: 0;
+    }
+
+    .metrics-panel {
+        flex: 0 0 260px;
+        width: 260px;
+        min-width: 240px;
+    }
+
+    .whatif-panel {
+        flex: 0 0 300px;
+        min-width: 280px;
+    }
 }
 
-body.theme-light .metrics-panel {
-    background: #ffffff !important;
-}
+@media (max-height: 760px) {
+    .topbar {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
 
-body.theme-light .whatif-panel {
-    background: #ffffff !important;
-    border-left-color: var(--border) !important;
-    border-right-color: var(--border) !important;
-    color: var(--text-main) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
+    .panel {
+        padding-top: 9px;
+        padding-bottom: 9px;
+    }
 
-body.theme-light .whatif-header,
-body.theme-light .whatif-footer {
-    background: #ffffff !important;
-    border-color: var(--border) !important;
+    .metric-card,
+    .insight-card,
+    .whatif-param {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .modal-window {
+        max-height: calc(100vh - 48px);
+    }
+
+    .binding-modal-window {
+        max-height: calc(100vh - 48px);
+    }
 }
 
 body.theme-light #chartCanvas {
     background:
         linear-gradient(
             180deg,
-            #ffffff,
-            #f8fafc
-        ) !important;
-    border-color: var(--border) !important;
-    box-shadow: var(--shadow) !important;
+            rgba(255,255,255,0.98),
+            rgba(241,245,249,0.96)
+        );
+    border-color: rgba(15,23,42,0.14);
+    box-shadow: var(--shadow);
 }
 
-body.theme-light button,
-body.theme-light .custom-select-btn,
-body.theme-light .binding-custom-select-btn {
-    border-color: rgba(37,99,235,0.24) !important;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(37,99,235,0.11),
-            rgba(37,99,235,0.055)
-        ) !important;
-    color: var(--text-main) !important;
-    box-shadow: none;
+body.theme-light .topbar {
+    background: rgba(248,250,252,0.88);
+    border-bottom-color: var(--border);
 }
 
-body.theme-light button:hover,
-body.theme-light .custom-select-btn:hover,
-body.theme-light .binding-custom-select-btn:hover {
-    border-color: rgba(37,99,235,0.42) !important;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(37,99,235,0.18),
-            rgba(37,99,235,0.08)
-        ) !important;
-    box-shadow: 0 10px 26px rgba(37,99,235,0.12) !important;
-}
-
-body.theme-light .primary-btn {
-    background:
-        linear-gradient(
-            180deg,
-            rgba(37,99,235,0.20),
-            rgba(37,99,235,0.10)
-        ) !important;
-}
-
-body.theme-light .secondary-btn {
-    background:
-        linear-gradient(
-            180deg,
-            rgba(15,23,42,0.045),
-            rgba(15,23,42,0.025)
-        ) !important;
-}
-
-body.theme-light input,
-body.theme-light select,
-body.theme-light textarea,
-body.theme-light .metric-input input,
-body.theme-light .binding-config-row input,
-body.theme-light .binding-config-row select,
-body.theme-light #sourceFolderPath,
-body.theme-light .whatif-horizon-row select {
-    background: #ffffff !important;
-    border-color: rgba(15,23,42,0.18) !important;
-    color: var(--text-main) !important;
-}
-
-body.theme-light select option,
-body.theme-light .binding-config-row select option {
-    background: #ffffff !important;
-    color: #111827 !important;
-}
-
-body.theme-light input::placeholder,
-body.theme-light textarea::placeholder {
-    color: #94a3b8 !important;
-}
-
-body.theme-light .analysis-menu,
-body.theme-light .custom-select-menu,
-body.theme-light .binding-custom-select-menu,
-body.theme-light .binding-template-tooltip,
-body.theme-light .binding-template-hover-tooltip {
-    background: #ffffff !important;
-    border-color: var(--border) !important;
-    color: var(--text-main) !important;
-    box-shadow: var(--shadow) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
-body.theme-light .analysis-item,
-body.theme-light .custom-select-option,
-body.theme-light .binding-custom-select-option {
-    color: var(--text-main) !important;
-}
-
-body.theme-light .analysis-item:hover,
-body.theme-light .custom-select-option:hover,
-body.theme-light .custom-select-option.active,
-body.theme-light .binding-custom-select-option:hover,
-body.theme-light .binding-custom-select-option.active,
-body.theme-light .binding-template-card:hover,
-body.theme-light .binding-template-card.active,
-body.theme-light .binding-custom-select.open .binding-custom-select-btn {
-    background: rgba(37,99,235,0.08) !important;
-    border-color: rgba(37,99,235,0.26) !important;
-    color: var(--text-main) !important;
-}
-
-body.theme-light .label,
-body.theme-light .project-card-db,
-body.theme-light .modal-hint,
-body.theme-light .whatif-header p,
-body.theme-light .whatif-control-meta,
-body.theme-light .whatif-control-description,
-body.theme-light .whatif-control-message,
-body.theme-light .whatif-more-note,
-body.theme-light .binding-section-header p,
-body.theme-light .binding-pill span,
-body.theme-light .binding-field-row span,
-body.theme-light .binding-variable-row span,
-body.theme-light .binding-metric-row span,
-body.theme-light .binding-config-row span,
-body.theme-light .binding-overview-row span,
-body.theme-light .binding-info-note,
-body.theme-light .binding-empty,
-body.theme-light .insight-card p,
-body.theme-light .insight-empty {
-    color: var(--text-muted) !important;
-}
-
-body.theme-light .binding-field-row em,
-body.theme-light .binding-variable-row em,
-body.theme-light .binding-template-card span,
-body.theme-light .whatif-param-value {
-    color: var(--accent-hover) !important;
-}
-
-body.theme-light .binding-step,
-body.theme-light .binding-progress-step.active span {
-    color: #ffffff !important;
-    background: rgba(37,99,235,0.82) !important;
-    border-color: rgba(37,99,235,0.32) !important;
-}
-
-body.theme-light .binding-progress-step.active {
-    background: rgba(37,99,235,0.08) !important;
-    border-color: rgba(37,99,235,0.28) !important;
-    color: var(--text-main) !important;
-}
-
-body.theme-light .binding-progress-step.complete {
-    background: rgba(21,128,61,0.08) !important;
-    border-color: rgba(21,128,61,0.22) !important;
-}
-
-body.theme-light .binding-metric-row code,
-body.theme-light .binding-overview-row code,
-body.theme-light code {
-    background: rgba(15,23,42,0.06) !important;
-    color: #1e40af !important;
-}
-
-body.theme-light .whatif-status {
-    background: rgba(37,99,235,0.08) !important;
-    border-color: rgba(37,99,235,0.20) !important;
-    color: #1e3a8a !important;
-}
-
-body.theme-light .whatif-status.success,
+body.theme-light .status-block,
 body.theme-light .binding-status.success,
-body.theme-light .import-result.success {
-    background: rgba(21,128,61,0.08) !important;
-    border-color: rgba(21,128,61,0.24) !important;
-    color: #166534 !important;
-}
-
-body.theme-light .whatif-status.error,
-body.theme-light .binding-status.error,
-body.theme-light .import-result.error {
-    background: rgba(220,38,38,0.08) !important;
-    border-color: rgba(220,38,38,0.24) !important;
-    color: #991b1b !important;
-}
-
-body.theme-light .binding-status.loading,
-body.theme-light .import-result.loading {
-    background: rgba(37,99,235,0.08) !important;
-    border-color: rgba(37,99,235,0.22) !important;
-    color: #1e3a8a !important;
-}
-
-body.theme-light .insight-card {
-    background: rgba(255,255,255,0.98) !important;
-}
-
-body.theme-light .insight-card.success {
-    background: rgba(21,128,61,0.06) !important;
-    border-color: rgba(21,128,61,0.22) !important;
-}
-
-body.theme-light .insight-card.info {
-    background: rgba(37,99,235,0.06) !important;
-    border-color: rgba(37,99,235,0.20) !important;
-}
-
-body.theme-light .insight-card.warning {
-    background: rgba(180,83,9,0.06) !important;
-    border-color: rgba(180,83,9,0.22) !important;
-}
-
-body.theme-light .insight-card.danger {
-    background: rgba(220,38,38,0.06) !important;
-    border-color: rgba(220,38,38,0.22) !important;
-}
-
-body.theme-light .insight-badge {
-    background: rgba(15,23,42,0.06) !important;
-    color: var(--text-muted) !important;
-}
-
-body.theme-light .modal-overlay {
-    background: rgba(15,23,42,0.38) !important;
-}
-
-body.theme-light .modal-window,
-body.theme-light .binding-modal-window {
-    background: #ffffff !important;
-    color: var(--text-main) !important;
-    border-color: rgba(15,23,42,0.14) !important;
-    box-shadow: 0 24px 60px rgba(15,23,42,0.20) !important;
-}
-
-body.theme-light .binding-event-scope {
-    background: rgba(37,99,235,0.05) !important;
-    border-color: rgba(37,99,235,0.20) !important;
+body.theme-light .whatif-status.success {
+    color: #166534;
+    background: rgba(34,197,94,0.10);
+    border-color: rgba(22,101,52,0.22);
 }
 
 body.theme-light .binding-warning-note {
-    background: rgba(180,83,9,0.08) !important;
-    border-color: rgba(180,83,9,0.24) !important;
-    color: #92400e !important;
+    color: #92400e;
+    background: rgba(245,158,11,0.12);
+    border-color: rgba(146,64,14,0.22);
 }
 
-body.theme-light .binding-event-type-option {
-    background: rgba(15,23,42,0.035) !important;
-    border-color: rgba(15,23,42,0.12) !important;
-    color: var(--text-main) !important;
-}
-
-body.theme-light .binding-event-type-option:hover {
-    background: rgba(37,99,235,0.08) !important;
-}
-
-body.theme-light .binding-event-type-option span,
 body.theme-light .binding-event-type-option input[type="checkbox"]:checked + span {
-    color: var(--text-main) !important;
+    color: #1d4ed8 !important;
 }
 
-body.theme-light .dev-console {
+/* ===== P11 FINAL SAFETY FIXES ===== */
+/* Исправление старого некорректного transition-правила внутри modal-open:
+   сохраняем hover-анимации, но не даём браузеру интерпретировать битое значение. */
+body.modal-open button,
+body.modal-open .analysis-item,
+body.modal-open .binding-template-card,
+body.modal-open .binding-custom-select-btn,
+body.modal-open .binding-custom-option,
+body.modal-open .project-card,
+body.modal-open .template-card {
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+/* Ранее базовая анти-фликер защита модалок использовала !important и
+   перебивала светлую тему. Возвращаем светлой теме нормальные цвета. */
+body.theme-light .modal-overlay {
+    background: rgba(15,23,42,0.22) !important;
+}
+
+body.theme-light .modal-window {
     background: rgba(255,255,255,0.98) !important;
     border-color: var(--border) !important;
     color: var(--text-main) !important;
 }
 
-body.theme-light .dev-header {
-    color: var(--text-muted) !important;
+body.theme-light .binding-modal-window,
+body.theme-light .source-modal-window {
+    background: rgba(255,255,255,0.98) !important;
 }
 
-body.theme-light * {
-    scrollbar-color: rgba(37,99,235,0.42) rgba(15,23,42,0.08);
-}
+/* Финальный порядок responsive-правил: при узком окне панели должны
+   уходить в колонку и не съезжать за пределы экрана после maximize/restore. */
+@media (max-width: 1050px) {
+    .dashboard-layout {
+        flex-direction: column !important;
+    }
 
-body.theme-light *::-webkit-scrollbar-track {
-    background: rgba(15,23,42,0.08) !important;
-}
+    .chart-container {
+        flex: 1 1 auto !important;
+        min-height: 320px;
+        width: 100%;
+    }
 
-body.theme-light *::-webkit-scrollbar-thumb {
-    background: linear-gradient(
-        180deg,
-        rgba(37,99,235,0.46),
-        rgba(37,99,235,0.24)
-    ) !important;
-    border-color: rgba(255,255,255,0.92) !important;
+    .metrics-panel,
+    .whatif-panel {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 0 0 auto !important;
+        border-left: none;
+        border-right: none;
+    }
+
+    .metrics-panel {
+        max-height: 240px;
+        border-top: 1px solid var(--border);
+    }
+
+    .whatif-panel {
+        max-height: 360px;
+        border-top: 1px solid var(--border);
+    }
 }

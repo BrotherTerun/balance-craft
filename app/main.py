@@ -235,37 +235,27 @@ ANALYSIS_TEMPLATES = [
                 "required": True
             },
             {
-                "key": "engagement",
-                "name": "Активность игрока",
-                "description": "Количество действий или иной показатель вовлечённости.",
+                "key": "previous_power",
+                "name": "Сила до начала сессии",
+                "description": "Системно вычисляемая величина: накопленный результат предыдущих сессий игрока.",
                 "required": False
             }
         ],
         "metrics": [
             {
-                "key": "Y_EXP_VELOCITY",
+                "key": "EV",
                 "name": "Скорость прогрессии",
-                "formula": "sum(flow_in) / duration"
+                "formula": "sum(flow_in) / max(duration, 1)"
             },
             {
-                "key": "K_POWER_SCORE",
-                "name": "Условная сила игрока",
-                "formula": "max(sum(flow_in) - sum(flow_out), 0)"
+                "key": "PGR",
+                "name": "Темп роста силы",
+                "formula": "(sum(flow_in) - sum(flow_out)) / max(duration, 1)"
             },
             {
-                "key": "S_UNSPENT_RESOURCES",
-                "name": "Доля неиспользованных ресурсов",
-                "formula": "(sum(flow_in) - sum(flow_out)) / sum(flow_in)"
-            },
-            {
-                "key": "D_PROGRESSION_DECAY",
-                "name": "Снижение эффективности прогрессии",
-                "formula": "sum(flow_out) / duration"
-            },
-            {
-                "key": "A_PROGRESSION_ROI",
-                "name": "Эффективность вложений в прогрессию",
-                "formula": "net_progress / sum(flow_out)"
+                "key": "DR",
+                "name": "Деградация прогрессии",
+                "formula": "sum(flow_out) / max(previous_power + sum(flow_in) - sum(flow_out), 1)"
             }
         ]
     },
@@ -291,6 +281,12 @@ ANALYSIS_TEMPLATES = [
                 "name": "Длительность окна анализа",
                 "description": "Период агрегации ресурсного потока.",
                 "required": True
+            },
+            {
+                "key": "previous_resource",
+                "name": "Ресурс до начала сессии",
+                "description": "Системно вычисляемая величина: накопленный ресурс на конец предыдущей сессии.",
+                "required": False
             }
         ],
         "metrics": [
@@ -302,12 +298,12 @@ ANALYSIS_TEMPLATES = [
             {
                 "key": "SSR_SPEND_SHARE",
                 "name": "Доля расхода",
-                "formula": "sum(resource_spend) / sum(resource_income)"
+                "formula": "sum(resource_spend) / max(sum(resource_income), 1)"
             },
             {
                 "key": "RI_RESOURCE_INFLATION",
-                "name": "Темп накопления ресурса",
-                "formula": "net_resource / sum(resource_income)"
+                "name": "Изменение ресурса",
+                "formula": "(sum(resource_income) - sum(resource_spend)) / max(previous_resource, 1)"
             }
         ]
     },
@@ -327,24 +323,18 @@ ANALYSIS_TEMPLATES = [
                 "name": "Прирост силы",
                 "description": "Изменение целевого показателя силы или эффективности.",
                 "required": True
-            },
-            {
-                "key": "action_count",
-                "name": "Количество действий",
-                "description": "Число улучшений, покупок, апгрейдов или других действий.",
-                "required": False
             }
         ],
         "metrics": [
             {
                 "key": "PE_PROGRESSION_EFFICIENCY",
                 "name": "Эффективность прогрессии",
-                "formula": "sum(power_gain) / count(action_count)"
+                "formula": "sum(power_gain) / max(sum(resource_cost), 1)"
             },
             {
                 "key": "ROI_RESOURCE_TO_POWER",
                 "name": "ROI ресурсов в силу",
-                "formula": "sum(power_gain) / sum(resource_cost)"
+                "formula": "sum(power_gain) / max(sum(resource_cost), 1)"
             },
             {
                 "key": "POWER_COST",
@@ -381,12 +371,12 @@ ANALYSIS_TEMPLATES = [
             {
                 "key": "APM_ACTIONS_PER_MINUTE",
                 "name": "Интенсивность действий",
-                "formula": "count(action_count) / duration"
+                "formula": "count(action_count) / max(duration, 1)"
             },
             {
                 "key": "TIME_EFFICIENCY",
                 "name": "Эффективность времени",
-                "formula": "sum(reward) / duration"
+                "formula": "sum(reward) / max(duration, 1)"
             },
             {
                 "key": "GRIND_FACTOR",
@@ -747,6 +737,7 @@ def eval_formula_node(node, context):
 
     import ast
     import operator
+    import math
 
     binary_ops = {
         ast.Add: operator.add,
@@ -762,12 +753,29 @@ def eval_formula_node(node, context):
         ast.USub: lambda value: -value
     }
 
+    def safe_sqrt(value):
+        return math.sqrt(max(to_float(value), 0.0))
+
+    def safe_log(value, base=math.e):
+        value = max(to_float(value), 1e-9)
+        base = max(to_float(base, math.e), 1e-9)
+        if abs(base - 1.0) <= 1e-9:
+            base = math.e
+        return math.log(value, base)
+
+    def safe_round(value, digits=0):
+        return round(to_float(value), int(to_float(digits)))
+
     functions = {
         "sum": safe_sum,
         "count": safe_count,
         "max": safe_max,
         "min": safe_min,
-        "abs": abs
+        "abs": abs,
+        "sqrt": safe_sqrt,
+        "log": safe_log,
+        "pow": pow,
+        "round": safe_round
     }
 
     if isinstance(node, ast.Expression):
@@ -919,41 +927,6 @@ def event_matches_scope(event, binding):
     return str(event.get("event_type") or "") in event_types
 
 
-def should_event_match_variable(event_type, variable_key):
-
-    event_type = str(event_type or "").lower()
-    variable_key = str(variable_key or "").lower()
-
-    income_markers = [
-        "in", "income", "gain", "reward", "flow_in", "power_gain"
-    ]
-
-    spend_markers = [
-        "out", "spend", "cost", "loss", "purchase", "flow_out", "resource_cost"
-    ]
-
-    event_is_income = (
-        "gain" in event_type
-        or "income" in event_type
-        or "reward" in event_type
-    )
-
-    event_is_spend = (
-        "spend" in event_type
-        or "cost" in event_type
-        or "purchase" in event_type
-        or "loss" in event_type
-    )
-
-    if any(marker in variable_key for marker in spend_markers):
-        return event_is_spend
-
-    if any(marker in variable_key for marker in income_markers):
-        return event_is_income
-
-    return True
-
-
 def read_path_from_event(event, path):
 
     if path.startswith("events.event_data."):
@@ -1016,7 +989,90 @@ def collect_binding_value(variable_key, binding, session, events, duration_minut
 
 
 
-def build_formula_context(template, semantic_bindings, session, events):
+def is_computed_source(binding):
+
+    source = normalize_semantic_binding(binding).get("source", "")
+
+    return str(source).startswith("computed.")
+
+
+def resolve_computed_binding_value(binding, context):
+
+    source = normalize_semantic_binding(binding).get("source", "")
+    alias = str(source).replace("computed.", "", 1)
+
+    computed_aliases = {
+        "duration_minutes": "duration",
+        "action_count": "action_count",
+        "previous_power": "previous_power",
+        "current_power": "current_power",
+        "delta_power": "delta_power",
+        "net_progress": "net_progress",
+        "progress_gain": "progress_gain",
+        "progress_loss": "progress_loss",
+        "previous_resource": "previous_resource",
+        "current_resource": "current_resource",
+        "resource_delta": "resource_delta",
+        "net_resource": "net_resource"
+    }
+
+    context_key = computed_aliases.get(alias, alias)
+
+    return context.get(context_key, 0.0)
+
+
+def get_formula_variable_names(expression):
+
+    import ast
+
+    ignored = {"sum", "count", "max", "min", "abs", "sqrt", "log", "pow", "round"}
+
+    if not expression or not str(expression).strip():
+        return set()
+
+    try:
+        tree = ast.parse(str(expression), mode="eval")
+    except SyntaxError:
+        return set()
+
+    names = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id not in ignored:
+            names.add(node.id)
+
+    return names
+
+
+def get_active_formula_variable_keys(template, semantic_bindings, formula_config):
+
+    names = set()
+
+    for expression in (formula_config or {}).values():
+        names.update(get_formula_variable_names(expression))
+
+    # Важно: активные переменные определяются формулами, а не старым
+    # содержимым semantic_bindings. Иначе после изменения формулы в проекте
+    # могут оставаться неиспользуемые переменные из предыдущей настройки.
+    if not names:
+        names.update(
+            variable.get("key")
+            for variable in template.get("variables", [])
+            if variable.get("key")
+        )
+
+    return sorted(name for name in names if name)
+
+
+def build_formula_context(
+    template,
+    semantic_bindings,
+    session,
+    events,
+    previous_power=0.0,
+    previous_resource=0.0,
+    formula_config=None
+):
 
     start_time = session.get("session_start")
     end_time = session.get("session_end")
@@ -1031,12 +1087,25 @@ def build_formula_context(template, semantic_bindings, session, events):
 
     context = {
         "duration": duration_minutes,
-        "action_count": len(events)
+        "action_count": len(events),
+        "previous_power": to_float(previous_power),
+        "previous_resource": to_float(previous_resource)
     }
 
-    for variable in template.get("variables", []):
-        key = variable.get("key")
-        binding = semantic_bindings.get(key, "")
+    active_variable_keys = get_active_formula_variable_keys(
+        template,
+        semantic_bindings,
+        formula_config or {}
+    )
+
+    # Сначала собираем только реальные источники данных. computed.* откладываем:
+    # часть таких величин (current_power, delta_power, net_progress) появляется
+    # только после расчёта flow_in/flow_out.
+    for key in active_variable_keys:
+        binding = semantic_bindings.get(key)
+
+        if not binding or is_computed_source(binding):
+            continue
 
         context[key] = collect_binding_value(
             key,
@@ -1046,16 +1115,47 @@ def build_formula_context(template, semantic_bindings, session, events):
             duration_minutes
         )
 
-    # Универсальные производные переменные для формул пресетов.
-    context["net_resource"] = (
-        safe_sum(context.get("resource_income"))
-        - safe_sum(context.get("resource_spend"))
+    # Производные величины раскрывают скрытую логику формул таблицы 1.2.
+    # Они могут использоваться напрямую в формулах или быть назначены на
+    # пользовательские переменные через источники computed.*.
+    progress_gain = safe_sum(context.get("flow_in"))
+    progress_loss = safe_sum(context.get("flow_out"))
+    net_progress = progress_gain - progress_loss
+
+    current_power = max(
+        to_float(previous_power) + net_progress,
+        0.0
     )
 
-    context["net_progress"] = (
-        safe_sum(context.get("flow_in"))
-        - safe_sum(context.get("flow_out"))
+    context["progress_gain"] = progress_gain
+    context["progress_loss"] = progress_loss
+    context["net_progress"] = net_progress
+    context["current_power"] = current_power
+    context["delta_power"] = current_power - to_float(previous_power)
+
+    resource_income = safe_sum(context.get("resource_income"))
+    resource_spend = safe_sum(context.get("resource_spend"))
+    net_resource = resource_income - resource_spend
+
+    current_resource = max(
+        to_float(previous_resource) + net_resource,
+        0.0
     )
+
+    context["net_resource"] = net_resource
+    context["current_resource"] = current_resource
+    context["resource_delta"] = current_resource - to_float(previous_resource)
+
+    # Теперь разворачиваем computed.* в реальные значения. Это позволяет
+    # пользователю ввести на шаге 3 любую переменную alpha, а на шаге 4
+    # назначить ей, например, computed.current_power.
+    for key in active_variable_keys:
+        binding = semantic_bindings.get(key)
+
+        if binding and is_computed_source(binding):
+            context[key] = resolve_computed_binding_value(binding, context)
+        elif key not in context:
+            context[key] = []
 
     return context
 
@@ -1115,6 +1215,8 @@ def recalculate_session_metrics(binding_config):
 
         processed_sessions = 0
         written_metrics = 0
+        previous_power_by_player = {}
+        previous_resource_by_player = {}
 
         for session in sessions:
             session_id = session["id"]
@@ -1125,7 +1227,10 @@ def recalculate_session_metrics(binding_config):
                 template,
                 semantic_bindings,
                 session,
-                events
+                events,
+                previous_power=previous_power_by_player.get(player_id, 0.0),
+                previous_resource=previous_resource_by_player.get(player_id, 0.0),
+                formula_config=formula_config
             )
 
             cursor.execute(
@@ -1148,6 +1253,13 @@ def recalculate_session_metrics(binding_config):
                 ))
 
                 written_metrics += 1
+
+            previous_power_by_player[player_id] = to_float(
+                context.get("current_power")
+            )
+            previous_resource_by_player[player_id] = to_float(
+                context.get("current_resource")
+            )
 
             processed_sessions += 1
 
@@ -1190,12 +1302,13 @@ def normalize_binding_for_storage(raw_binding):
 
 def build_clean_binding_config(template_id, payload):
     """
-    Собирает конфигурацию мастера строго по выбранному шаблону.
+    Собирает конфигурацию мастера по выбранному шаблону.
 
-    UI хранит черновики формул/названий/привязок между переключениями
-    шаблонов, поэтому в payload могут оставаться метрики старого шаблона.
-    На backend дополнительно отсекаем всё лишнее, чтобы в session_metrics
-    и на графики попадали только метрики текущего selected_template.
+    Метрики по-прежнему ограничены выбранным шаблоном, но переменные больше
+    не берутся из стокового списка template.variables. Сохраняются именно те
+    переменные, которые реально встречаются в формулах шага 3. Это устраняет
+    рассинхронизацию: если пользователь ввёл alpha, на шаге 4 alpha получает
+    источник данных и затем попадает в перерасчёт.
     """
 
     template = get_template_by_id(template_id)
@@ -1203,21 +1316,6 @@ def build_clean_binding_config(template_id, payload):
     raw_bindings = payload.get("semantic_bindings") or {}
     raw_formulas = payload.get("formula_config") or {}
     raw_labels = payload.get("metric_labels") or {}
-
-    clean_bindings = {}
-
-    for variable in template.get("variables", []):
-        variable_key = variable.get("key")
-
-        if not variable_key:
-            continue
-
-        clean_bindings[variable_key] = normalize_binding_for_storage(
-            raw_bindings.get(
-                variable_key,
-                ""
-            )
-        )
 
     clean_formulas = {}
     clean_labels = {}
@@ -1236,6 +1334,13 @@ def build_clean_binding_config(template_id, payload):
         clean_labels[metric_key] = raw_labels.get(
             metric_key,
             metric.get("name", metric_key)
+        )
+
+    clean_bindings = {}
+
+    for variable_key in get_active_formula_variable_keys(template, raw_bindings, clean_formulas):
+        clean_bindings[variable_key] = normalize_binding_for_storage(
+            raw_bindings.get(variable_key, "")
         )
 
     return {
@@ -1318,14 +1423,19 @@ class Backend(QObject):
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("""
-            SELECT DISTINCT player_id
-            FROM sessions
-        """)
+        try:
+            cursor.execute("""
+                SELECT DISTINCT player_id
+                FROM sessions
+            """)
 
-        result = cursor.fetchall()
+            result = cursor.fetchall()
 
-        return json.dumps(result)
+            return json.dumps(result, ensure_ascii=False)
+
+        finally:
+            cursor.close()
+            conn.close()
 
 
     @Slot(str, result=str)
@@ -1490,7 +1600,10 @@ class Backend(QObject):
     @Slot(str, str, result=str)
     def processPipeline(self, project_id, folder_path):
 
-        result = run_pipeline(folder_path)
+        project = get_project_by_id(project_id)
+        template_id = (project or {}).get("selected_template") or "progression_decay"
+
+        result = run_pipeline(folder_path, template_id=template_id)
 
         updated_project = update_project_import_result(
             project_id,
@@ -1611,11 +1724,9 @@ class Backend(QObject):
             "selected_template": "progression_decay",
             "semantic_bindings": {},
             "metric_labels": {
-                "EV": "Скорость получения опыта",
+                "EV": "Скорость прогрессии",
                 "PGR": "Темп роста силы",
-                "DR": "Деградация прогрессии",
-                "K": "Сила игрока",
-                "Y": "Скорость прогрессии"
+                "DR": "Деградация прогрессии"
             },
             "last_player_id": None,
             "last_import": None,
@@ -1752,14 +1863,9 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    try:
-        QApplication.setAttribute(
-            Qt.ApplicationAttribute.AA_UseSoftwareOpenGL,
-            True
-        )
-    except Exception as e:
-        print("[UI] Software OpenGL attribute was not applied:", e)
-
+    # Не принуждаем Qt к SoftwareOpenGL: на большом экране это может дать
+    # заметную задержку отклика. Устойчивость QWebEngine держим более мягко —
+    # через Chromium flags выше и layout-стабилизацию в UI.
     app = QApplication(sys.argv)
 
     window = MainWindow()

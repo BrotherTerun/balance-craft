@@ -103,11 +103,7 @@ function openDashboard(project) {
 
     maybeOpenSourceModal();
 
-    setTimeout(() => {
-        if (chart) {
-            chart.resize();
-        }
-    }, 150);
+    setTimeout(() => stabilizeUILayout("dashboard-open"), 150);
 }
 
 
@@ -242,6 +238,7 @@ function updateInstabilityAnalysis(data) {
         buildAnnotations(bifPoints);
 
     chart.update();
+    stabilizeUILayout("annotations");
 }
 
 function getInsightLevelLabel(level) {
@@ -374,8 +371,8 @@ function renderPracticalInsights(data) {
 
         container.innerHTML = `
             <div class="insight-empty">
-                Для текущего набора данных нет уверенных практических выводов.
-                Проверьте выбранный шаблон, семантические привязки и объём импортированных сессий.
+                Для текущего набора данных не найдено устойчивых практических выводов.
+                Проверьте выбранный шаблон, семантические привязки и рассчитанные метрики.
             </div>
         `;
 
@@ -437,7 +434,7 @@ if (annotationPlugin) {
 
 } else {
 
-    console.warn("Модуль отметок нестабильности не загружен");
+    console.error("Annotation plugin NOT loaded");
 }
 
 function buildAnnotations(points) {
@@ -458,7 +455,7 @@ function buildAnnotations(points) {
 
             label: {
                 display: true,
-                content: 'INSTABILITY',
+                content: 'НЕСТАБИЛЬНОСТЬ',
                 position: 'start'
             }
         };
@@ -500,9 +497,50 @@ let chart = new Chart(ctx, {
     }
 }); 
 
+let layoutStabilizeTimer = null;
+let resizeRaf = null;
+
+function stabilizeUILayout(reason = "") {
+    if (!document.body) {
+        return;
+    }
+
+    document.body.classList.add("ui-render-stabilizing");
+
+    // Принудительно завершаем текущий layout pass QWebEngine перед resize Chart.js.
+    // Это помогает после разворачивания окна, открытия панелей и смены темы,
+    // не отключая hover-эффекты в обычной работе интерфейса.
+    void document.body.offsetHeight;
+
+    if (chart && typeof chart.resize === "function") {
+        requestAnimationFrame(() => {
+            chart.resize();
+        });
+    }
+
+    clearTimeout(layoutStabilizeTimer);
+    layoutStabilizeTimer = setTimeout(() => {
+        document.body.classList.remove("ui-render-stabilizing");
+    }, 140);
+}
+
+function handleViewportResize() {
+    if (resizeRaf) {
+        cancelAnimationFrame(resizeRaf);
+    }
+
+    resizeRaf = requestAnimationFrame(() => {
+        stabilizeUILayout("resize");
+        resizeRaf = null;
+    });
+}
+
+window.addEventListener("resize", handleViewportResize);
+window.addEventListener("orientationchange", handleViewportResize);
+
 async function analyzePlayer() {
     if (!backend) {
-        alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+        alert("Система ещё загружается. Повторите попытку через несколько секунд.");
         return;
     }
 
@@ -624,6 +662,7 @@ function updateChart(data) {
     }
 
     chart.update();
+    stabilizeUILayout("chart-update");
 }
 
 function updateChartLabels() {
@@ -641,6 +680,7 @@ function updateChartLabels() {
     }
 
     chart.update();
+    stabilizeUILayout("chart-labels");
 }
 
 document.getElementById("runBtn").addEventListener("click", analyzePlayer);
@@ -650,41 +690,42 @@ document.getElementById("runBtn").addEventListener("click", analyzePlayer);
 const metricsBtn = document.getElementById("metricsBtn");
 
 let metricLabels = {
-    ev: "Скорость получения опыта",
-    pgr: "Темп роста уровня",
+    ev: "Скорость прогрессии",
+    pgr: "Темп роста силы",
     dr: "Деградация прогрессии"
 };
 
 const saveMetricsBtn =
     document.getElementById("saveMetricsBtn");
 
-saveMetricsBtn.addEventListener("click", () => {
+if (saveMetricsBtn) {
+    saveMetricsBtn.addEventListener("click", () => {
 
-    try {
-        metricLabels.ev =
-            document.getElementById("evInput").value;
+        try {
+            metricLabels.ev =
+                document.getElementById("evInput")?.value || metricLabels.ev;
 
-        metricLabels.pgr =
-            document.getElementById("pgrInput").value;
+            metricLabels.pgr =
+                document.getElementById("pgrInput")?.value || metricLabels.pgr;
 
-        metricLabels.dr =
-            document.getElementById("drInput").value;
+            metricLabels.dr =
+                document.getElementById("drInput")?.value || metricLabels.dr;
 
-        updateChartLabels();
-    }
-    catch (TypeError) {
-        addLog("Не удалось применить подписи метрик к текущему графику")
-    }
-    finally {
-        document
-            .getElementById("metrics-screen")
-            .classList.remove("active");
-
-        document
-            .getElementById("dashboard-screen")
-            .classList.add("active");
-    }
-});
+            updateChartLabels();
+        }
+        catch (TypeError) {
+            addLog("Не удалось обновить подписи метрик для текущего графика.");
+        }
+        finally {
+            const metricsModal = document.getElementById("metricsModal");
+            if (metricsModal) {
+                metricsModal.classList.add("is-hidden");
+            }
+            setModalOpenState(false);
+            stabilizeUILayout("metrics-labels-close");
+        }
+    });
+}
 
 function formatPlayerId(playerId) {
 
@@ -785,7 +826,7 @@ async function loadPlayers() {
     }
 
     // Первый пункт — агрегированная картина по проекту.
-    // Backend интерпретирует ALL_PLAYERS_ID как команду посчитать
+    // Служебное значение ALL_PLAYERS_ID сообщает приложению, что нужно посчитать
     // среднее значение каждой метрики по порядковому номеру сессии игрока.
     const allPlayersOption =
         createPlayerOption(
@@ -844,26 +885,18 @@ window.addEventListener("load", () => {
 });
 window.addEventListener("keydown", (event) => {
 
-    if (event.ctrlKey && event.key === "d") {
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "d") {
 
         event.preventDefault();
-        
+
         const devConsole = document.getElementById("devConsole");
 
-        devConsole.classList.toggle("visible");
-
-        console.log("TAB PRESSED");
+        if (devConsole) {
+            devConsole.classList.toggle("visible");
+        }
     }
 });
 
-const originalConsoleLog = console.log;
-
-console.log = function(message) {
-
-    addLog("[JS] " + message);
-
-    originalConsoleLog(message);
-};
 
 
 const newProjectBtn =
@@ -875,7 +908,7 @@ const openProjectBtn =
 newProjectBtn.addEventListener("click", async () => {
 
     if (!backend) {
-        alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+        alert("Система ещё загружается. Повторите попытку через несколько секунд.");
         return;
     }
 
@@ -949,6 +982,8 @@ function applyAppTheme(theme, shouldPersist = true) {
             console.warn("Не удалось сохранить тему интерфейса", error);
         }
     }
+
+    requestAnimationFrame(() => stabilizeUILayout("theme-change"));
 }
 
 function initThemeToggle() {
@@ -996,14 +1031,15 @@ function openModal(id) {
         document.getElementById(id);
 
     if (!modal) {
-        console.error(`Модальное окно ${id} не найдено в index.html`);
-        alert("Не удалось открыть нужное окно интерфейса.");
+        console.error(`Модальное окно ${id} не найдено`);
+        alert(`Не удалось открыть окно ${id}. Перезапустите приложение.`);
         return;
     }
 
     modal.classList.remove("is-hidden");
 
     setModalOpenState(true);
+    stabilizeUILayout("modal-open");
 }
 
 function setModalOpenState(isOpen) {
@@ -1037,6 +1073,7 @@ function closeAllModals() {
         });
 
     setModalOpenState(false);
+    stabilizeUILayout("modal-close");
 }
 
 function getCurrentProjectId() {
@@ -1068,19 +1105,19 @@ function openSourceModal() {
 
     if (!sourceModal) {
         console.error("sourceModal не найден в index.html");
-        alert("Не удалось открыть окно источника событий.");
+        alert("Не удалось открыть окно источника событий. Перезапустите приложение.");
         return;
     }
 
     if (!sourceFolderPath) {
         console.error("sourceFolderPath не найден в index.html");
-        alert("Не удалось отобразить путь к источнику событий.");
+        alert("Не удалось открыть поле источника событий. Перезапустите приложение.");
         return;
     }
 
     if (!resultBox) {
         console.error("sourceImportResult не найден в index.html");
-        alert("Не удалось показать результат импорта.");
+        alert("Не удалось открыть блок результата импорта. Перезапустите приложение.");
         return;
     }
 
@@ -1099,6 +1136,7 @@ function openSourceModal() {
     sourceModal.classList.remove("is-hidden");
 
     setModalOpenState(true);
+    stabilizeUILayout("source-modal-open");
 }
 
 
@@ -1117,6 +1155,7 @@ function showSourceImportResult(type, html) {
     resultBox.classList.add(type);
 
     resultBox.innerHTML = html;
+    stabilizeUILayout("source-import-result");
 }
 
 
@@ -1260,6 +1299,48 @@ function getBindingSourceOptions() {
             label: "computed.action_count · количество событий",
             isNumeric: true,
             sourceKind: "computed"
+        },
+        {
+            value: "computed.previous_power",
+            label: "computed.previous_power · сила до начала сессии",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.current_power",
+            label: "computed.current_power · сила на конец сессии",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.delta_power",
+            label: "computed.delta_power · изменение силы за сессию",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.net_progress",
+            label: "computed.net_progress · входящий поток минус потери",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.previous_resource",
+            label: "computed.previous_resource · ресурс до начала сессии",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.current_resource",
+            label: "computed.current_resource · ресурс на конец сессии",
+            isNumeric: true,
+            sourceKind: "computed"
+        },
+        {
+            value: "computed.resource_delta",
+            label: "computed.resource_delta · изменение ресурса за сессию",
+            isNumeric: true,
+            sourceKind: "computed"
         }
     ];
 
@@ -1287,12 +1368,58 @@ function getBindingSourceOptions() {
 }
 
 
+function getDefaultEventDataSource() {
+    const fields = bindingDraft.candidates?.attribute_fields || [];
+    const numericFields = fields.filter(item => item && item.is_numeric && item.path);
+
+    const preferredNames = ["value", "amount", "quantity", "reward", "cost", "delta", "score"];
+
+    for (const preferred of preferredNames) {
+        const match = numericFields.find(item => String(item.key || "").toLowerCase() === preferred);
+        if (match) {
+            return match.path;
+        }
+    }
+
+    return numericFields.length
+        ? numericFields[0].path
+        : "events.event_data.value";
+}
+
 function getDefaultBindingForVariable(variableKey) {
 
     const key = String(variableKey || "").toLowerCase();
 
-    if (key.includes("duration")) {
+    if (key.includes("duration") || key.includes("time")) {
         return "computed.duration_minutes";
+    }
+
+    if (key === "previous_power" || key.includes("previous_power")) {
+        return "computed.previous_power";
+    }
+
+    if (key === "current_power" || key.includes("current_power")) {
+        return "computed.current_power";
+    }
+
+    if (key === "delta_power" || key.includes("delta_power")) {
+        return "computed.delta_power";
+    }
+
+    if (key === "net_progress" || key.includes("net_progress")) {
+        return "computed.net_progress";
+    }
+
+    if (key === "previous_resource" || key.includes("previous_resource")) {
+        return "computed.previous_resource";
+    }
+
+    if (key === "current_resource" || key.includes("current_resource")) {
+        return "computed.current_resource";
+    }
+
+    if (key === "resource_delta" || key.includes("resource_delta")) {
+        return "computed.resource_delta";
     }
 
     if (
@@ -1303,7 +1430,7 @@ function getDefaultBindingForVariable(variableKey) {
         return "computed.action_count";
     }
 
-    return "events.event_data.value";
+    return getDefaultEventDataSource();
 }
 
 
@@ -1451,6 +1578,60 @@ function initializeBindingDraftFromProject() {
     });
 }
 
+function eventTypeSetsAreEqual(left, right) {
+    const a = new Set(left || []);
+    const b = new Set(right || []);
+
+    if (a.size !== b.size) {
+        return false;
+    }
+
+    for (const item of a) {
+        if (!b.has(item)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function validateOppositeEventFlows() {
+    const pairs = [
+        ["flow_in", "flow_out", "входящего потока и потерь прогрессии"],
+        ["resource_income", "resource_spend", "дохода и расхода ресурса"],
+        ["power_gain", "resource_cost", "прироста силы и затрат"]
+    ];
+
+    for (const [leftKey, rightKey, label] of pairs) {
+        const left = normalizeVariableBinding(bindingDraft.variableBindings[leftKey]);
+        const right = normalizeVariableBinding(bindingDraft.variableBindings[rightKey]);
+
+        if (!left.source || !right.source) {
+            continue;
+        }
+
+        if (!isEventDataSource(left.source) || !isEventDataSource(right.source)) {
+            continue;
+        }
+
+        if (left.source !== right.source) {
+            continue;
+        }
+
+        if (eventTypeSetsAreEqual(left.event_types, right.event_types)) {
+            alert(
+                `Для ${label} выбран один и тот же источник ${left.source} ` +
+                `и одинаковый набор event_type. Разделите типы событий, иначе метрики могут стать нулевыми или неинформативными.`
+            );
+
+            setBindingStep(4);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function validateEventScopedBindings() {
     const template = getSelectedTemplate();
 
@@ -1458,7 +1639,7 @@ function validateEventScopedBindings() {
         return true;
     }
 
-    for (const variable of (template.variables || [])) {
+    for (const variable of buildFormulaVariableList()) {
         const key = variable.key;
         const binding = normalizeVariableBinding(
             bindingDraft.variableBindings[key]
@@ -1478,7 +1659,7 @@ function validateEventScopedBindings() {
         }
     }
 
-    return true;
+    return validateOppositeEventFlows();
 }
 
 function ensureBindingTemplateTooltip() {
@@ -1811,16 +1992,55 @@ function renderBindingTemplates(templates, selectedTemplateId) {
 }
 
 
-function ensureDraftForSelectedTemplate() {
 
+const FORMULA_FUNCTION_NAMES = new Set([
+    "sum", "count", "max", "min", "abs", "round", "sqrt", "log", "pow"
+]);
+
+function extractFormulaVariables(expression) {
+    const text = String(expression || "");
+    const names = new Set();
+    const matches = text.match(/[A-Za-z_][A-Za-z0-9_]*/g) || [];
+
+    matches.forEach(name => {
+        if (!FORMULA_FUNCTION_NAMES.has(name)) {
+            names.add(name);
+        }
+    });
+
+    return Array.from(names);
+}
+
+function getFormulaVariableKeys() {
     const template = getSelectedTemplate();
 
     if (!template) {
-        return;
+        return [];
     }
 
-    (template.metrics || []).forEach(metric => {
+    ensureFormulaAndMetricDrafts(template);
 
+    const metricKeys = new Set((template.metrics || []).map(metric => metric.key));
+    const variableSet = new Set();
+
+    (template.metrics || []).forEach(metric => {
+        const expression = bindingDraft.formulas[metric.key] || metric.formula || "";
+        extractFormulaVariables(expression).forEach(name => {
+            if (!metricKeys.has(name)) {
+                variableSet.add(name);
+            }
+        });
+    });
+
+    if (!variableSet.size) {
+        (template.variables || []).forEach(variable => variableSet.add(variable.key));
+    }
+
+    return Array.from(variableSet);
+}
+
+function ensureFormulaAndMetricDrafts(template) {
+    (template.metrics || []).forEach(metric => {
         if (!bindingDraft.formulas[metric.key]) {
             bindingDraft.formulas[metric.key] = metric.formula || "";
         }
@@ -1829,8 +2049,49 @@ function ensureDraftForSelectedTemplate() {
             bindingDraft.metricLabels[metric.key] = metric.name || metric.key;
         }
     });
+}
 
-    (template.variables || []).forEach(variable => {
+function buildFormulaVariableList() {
+    const template = getSelectedTemplate();
+
+    if (!template) {
+        return [];
+    }
+
+    ensureFormulaAndMetricDrafts(template);
+
+    const stockVariables = new Map(
+        (template.variables || []).map(variable => [variable.key, variable])
+    );
+
+    return getFormulaVariableKeys().map(key => {
+        const stock = stockVariables.get(key);
+
+        if (stock) {
+            return stock;
+        }
+
+        return {
+            key: key,
+            name: key,
+            description: "Пользовательская переменная, найденная в формулах шага 3.",
+            required: true,
+            formulaDerived: true
+        };
+    });
+}
+
+function ensureDraftForSelectedTemplate() {
+
+    const template = getSelectedTemplate();
+
+    if (!template) {
+        return;
+    }
+
+    ensureFormulaAndMetricDrafts(template);
+
+    buildFormulaVariableList().forEach(variable => {
 
         const defaultSource = getDefaultBindingForVariable(
             variable.key
@@ -1880,8 +2141,8 @@ function renderBindingFormulaDraft() {
 
     root.innerHTML = `
         <div class="binding-info-note">
-            Формулы задают способ расчёта метрик выбранного шаблона.
-            Изменяйте их только если сохраняется смысл соответствующей метрики.
+            Формулы используются при пересчёте метрик после сохранения мастера.
+            При изменении формулы сохраняйте исходный смысл метрики выбранного шаблона.
         </div>
         <div class="binding-config-list">
             ${metricsHtml || "<div class='binding-empty'>У выбранного шаблона нет метрик.</div>"}
@@ -1944,7 +2205,9 @@ function renderBindingVariableMappingDraft() {
         `)
         .join("");
 
-    const variablesHtml = (template.variables || [])
+    const activeVariables = buildFormulaVariableList();
+
+    const variablesHtml = activeVariables
         .map(variable => {
 
             const binding = normalizeVariableBinding(
@@ -1988,7 +2251,7 @@ function renderBindingVariableMappingDraft() {
                 <div class="binding-config-row binding-mapping-row">
                     <label>
                         <strong>${escapeHtml(variable.key)}</strong>
-                        <span>${escapeHtml(variable.name)} · ${variable.required ? "обязательная" : "дополнительная"}</span>
+                        <span>${escapeHtml(variable.name)} · ${variable.formulaDerived ? "из формулы" : (variable.required ? "обязательная" : "дополнительная")}</span>
                     </label>
 
                     <div class="binding-custom-select"
@@ -2129,7 +2392,7 @@ function renderBindingMetricLabelsDraft() {
             <div class="binding-config-row">
                 <label>
                     <strong>${escapeHtml(metric.key)}</strong>
-                    <span>${escapeHtml(metric.formula || "")}</span>
+                    <span>${escapeHtml(bindingDraft.formulas[metric.key] || metric.formula || "")}</span>
                 </label>
                 <input
                     type="text"
@@ -2175,7 +2438,7 @@ function renderBindingOverviewDraft() {
 
     ensureDraftForSelectedTemplate();
 
-    const variableHtml = (template.variables || [])
+    const variableHtml = buildFormulaVariableList()
         .map(variable => `
             <div class="binding-overview-row">
                 <strong>${escapeHtml(variable.key)}</strong>
@@ -2305,7 +2568,7 @@ function setBindingStep(step) {
 async function loadBindingWizardData() {
 
     if (!backend) {
-        showBindingStatus("error", "Внутренние службы приложения ещё не готовы. Повторите действие через несколько секунд.");
+        showBindingStatus("error", "Система ещё загружается. Повторите попытку через несколько секунд.");
         return;
     }
 
@@ -2358,7 +2621,7 @@ async function loadBindingWizardData() {
 
         showBindingStatus(
             "error",
-            `<strong>Не удалось загрузить мастер семантики</strong><br>${escapeHtml(error)}`
+            `<strong>Ошибка загрузки Binding Wizard</strong><br>${escapeHtml(error)}`
         );
     }
 }
@@ -2390,7 +2653,7 @@ function buildSelectedTemplateBindingPayload() {
 
     const semanticBindings = {};
 
-    (template.variables || []).forEach(variable => {
+    buildFormulaVariableList().forEach(variable => {
 
         const key = variable.key;
 
@@ -2538,7 +2801,7 @@ async function saveBindingWizardDraft() {
 
         showBindingStatus(
             "error",
-            `<strong>Не удалось сохранить настройки семантики</strong><br>${escapeHtml(error)}`
+            `<strong>Ошибка сохранения Binding Wizard</strong><br>${escapeHtml(error)}`
         );
     }
 }
@@ -2602,7 +2865,7 @@ bindClick("sourceBrowseBtn", async () => {
 
         if (!backend) {
 
-            alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+            alert("Система ещё загружается. Повторите попытку через несколько секунд.");
             return;
         }
 
@@ -2643,7 +2906,7 @@ bindClick("sourceImportBtn", async () => {
 
         if (!backend) {
 
-            alert("Приложение ещё загружается. Повторите действие через несколько секунд.");
+            alert("Система ещё загружается. Повторите попытку через несколько секунд.");
             return;
         }
 
@@ -2682,6 +2945,7 @@ bindClick("sourceImportBtn", async () => {
                 );
 
             const result = JSON.parse(response);
+
 
             if (result.success) {
 
@@ -2739,7 +3003,7 @@ bindClick("sourceImportBtn", async () => {
             showSourceImportResult(
                 "error",
                 `
-                <strong>Не удалось обработать результат импорта</strong><br>
+                <strong>Ошибка обработки ответа backend</strong><br>
                 ${error}
                 `
             );
@@ -2809,11 +3073,7 @@ function openWhatIfPanel() {
 
     loadWhatIfParameters();
 
-    setTimeout(() => {
-        if (chart) {
-            chart.resize();
-        }
-    }, 120);
+    setTimeout(() => stabilizeUILayout("what-if-open"), 120);
 }
 
 function closeWhatIfPanel() {
@@ -2825,11 +3085,7 @@ function closeWhatIfPanel() {
     whatIfPanel.classList.remove("visible");
     whatIfPanel.classList.add("is-hidden");
 
-    setTimeout(() => {
-        if (chart) {
-            chart.resize();
-        }
-    }, 120);
+    setTimeout(() => stabilizeUILayout("what-if-close"), 120);
 }
 
 if (whatIfBtn) {
@@ -2864,7 +3120,7 @@ async function loadWhatIfParameters() {
     if (!backend) {
         setWhatIfStatus(
             "error",
-            "Внутренние службы приложения ещё загружаются. Повторите попытку через несколько секунд."
+            "Система ещё загружается. Повторите попытку после открытия проекта."
         );
         return;
     }
@@ -2979,7 +3235,7 @@ function renderWhatIfControls(data) {
             <div class="whatif-control-group">
                 <h3>Нет доступных параметров</h3>
                 <p class="whatif-control-message">
-                    В проекте пока нет сохранённых семантических привязок.
+                    В проекте пока нет сохранённых semantic_bindings.
                     Пройдите мастер семантики и назначьте источники переменным шаблона.
                 </p>
             </div>
@@ -3022,7 +3278,6 @@ function renderWhatIfEntityGroup(control) {
         : [];
 
     const renderedRows = rows
-        .slice(0, 60)
         .map(row => {
 
             const controlId = escapeHtml(row.control_id);
@@ -3055,9 +3310,7 @@ function renderWhatIfEntityGroup(control) {
         })
         .join("");
 
-    const moreNote = rows.length > 60
-        ? `<div class="whatif-more-note">Показаны первые 60 сущностей из ${rows.length}. Для демонстрации доступны наиболее значимые записи справочника.</div>`
-        : "";
+    const moreNote = "";
 
     return `
         <section class="whatif-control-group" data-variable-key="${escapeHtml(control.variable_key)}">
@@ -3336,6 +3589,7 @@ function clearWhatIfScenario() {
     }
 
     chart.update();
+    stabilizeUILayout("scenario-clear");
     lastWhatIfScenario = null;
 }
 
@@ -3390,6 +3644,7 @@ function applyScenarioToChart(data) {
     });
 
     chart.update();
+    stabilizeUILayout("scenario-apply");
 }
 
 function hideWhatIfScenarioInsights() {
@@ -3423,7 +3678,7 @@ function renderWhatIfScenarioInsights(data) {
         panel.classList.remove("is-hidden");
         list.innerHTML = `
             <div class="insight-empty">
-                Сценарий построен. Для выбранных параметров нет дополнительных предупреждений.
+                Сценарий построен, но backend не вернул отдельных выводов.
             </div>
         `;
         return;
@@ -3491,7 +3746,7 @@ async function forecastWhatIfScenario() {
     const config = collectWhatIfScenarioConfig();
 
     if (!config.controls.length) {
-        alert("Нет доступных параметров What-if для прогноза");
+        alert("Нет доступных what-if параметров для прогноза");
         return;
     }
 

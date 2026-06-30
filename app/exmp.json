@@ -1,9 +1,0 @@
-{
-  "timestamp": "2026-05-07T18:24:11",
-  "entity_id": "player_014",
-  "event_type": "resource_gain",
-  "attributes": {
-    "resource": "gold",
-    "value": 150
-  }
-}

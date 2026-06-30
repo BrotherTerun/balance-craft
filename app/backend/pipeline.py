@@ -527,18 +527,40 @@ def insert_event(cursor, events_meta, event, session_id):
 
 def get_numeric_value(event):
 
-    attributes = event.get("attributes", {})
+    attributes = event.get("attributes", {}) or {}
 
-    value = attributes.get("value", 0)
+    # На этапе первичного импорта пользователь ещё не прошёл мастер
+    # семантики, поэтому берём наиболее распространённые числовые ключи.
+    # Точный источник затем задаётся в Binding Wizard и пересчитывается.
+    preferred_keys = (
+        "value",
+        "amount",
+        "quantity",
+        "reward",
+        "cost",
+        "delta",
+        "score"
+    )
 
-    try:
-        return float(value)
+    for key in preferred_keys:
+        if key not in attributes:
+            continue
 
-    except (TypeError, ValueError):
-        return 0.0
+        try:
+            return float(attributes.get(key))
+        except (TypeError, ValueError):
+            continue
+
+    for value in attributes.values():
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+
+    return 0.0
 
 
-def calculate_metrics_for_template(entity_events, template_id):
+def calculate_metrics_for_template(entity_events, template_id, previous_power=0.0, previous_resource=0.0):
 
     start_time = entity_events[0]["timestamp"]
     end_time = entity_events[-1]["timestamp"]
@@ -575,32 +597,32 @@ def calculate_metrics_for_template(entity_events, template_id):
 
     net = gain - spend
 
-    # Базовые метрики сохраняем всегда,
-    # чтобы существующий график K(t)/Y(t)/EV/PGR/DR не ломался.
+    # Базовые метрики первичного импорта соответствуют таблице 1.2.
+    current_power = max(float(previous_power or 0.0) + net, 0.0)
+    delta_power = current_power - float(previous_power or 0.0)
+    current_resource = max(float(previous_resource or 0.0) + net, 0.0)
+    resource_delta = current_resource - float(previous_resource or 0.0)
+
     metrics = {
-        "Y_EXP_VELOCITY": gain / duration_minutes,
-        "K_POWER_SCORE": max(net, 0),
-        "L_SESSION_ENGAGEMENT": actions,
-        "S_UNSPENT_RESOURCES": net / gain if gain > 0 else 0,
-        "D_PROGRESSION_DECAY": spend / duration_minutes,
-        "A_PROGRESSION_ROI": net / spend if spend > 0 else 0,
-        "SPEND_XP_TOTAL": spend
+        "EV": gain / duration_minutes,
+        "PGR": delta_power / duration_minutes,
+        "DR": spend / max(current_power, 1)
     }
 
     if template_id == "resource_flow":
 
         metrics.update({
             "RF_RESOURCE_FLOW": net,
-            "SSR_SPEND_SHARE": spend / gain if gain > 0 else 0,
-            "RI_RESOURCE_INFLATION": net / gain if gain > 0 else 0
+            "SSR_SPEND_SHARE": spend / max(gain, 1),
+            "RI_RESOURCE_INFLATION": resource_delta / max(float(previous_resource or 0.0), 1)
         })
 
     elif template_id == "resource_conversion":
 
         metrics.update({
-            "PE_PROGRESSION_EFFICIENCY": net / actions if actions > 0 else 0,
-            "ROI_RESOURCE_TO_POWER": net / spend if spend > 0 else 0,
-            "POWER_COST": spend / max(net, 1)
+            "PE_PROGRESSION_EFFICIENCY": gain / max(spend, 1),
+            "ROI_RESOURCE_TO_POWER": gain / max(spend, 1),
+            "POWER_COST": spend / max(gain, 1)
         })
 
     elif template_id == "engagement_resource":
@@ -693,6 +715,10 @@ def import_and_calculate(conn, events, template_id):
 
     imported_events = 0
     processed_sessions = 0
+    state_by_entity = defaultdict(lambda: {
+        "previous_power": 0.0,
+        "previous_resource": 0.0
+    })
 
     try:
         for (entity_id, observation_id), entity_events in sorted(
@@ -732,10 +758,21 @@ def import_and_calculate(conn, events, template_id):
 
                 imported_events += 1
 
+            entity_state = state_by_entity[entity_id]
+
             metrics = calculate_metrics_for_template(
                 entity_events,
-                template_id
+                template_id,
+                previous_power=entity_state["previous_power"],
+                previous_resource=entity_state["previous_resource"]
             )
+
+            session_net = metrics.get("PGR", 0) * max(
+                (entity_events[-1]["timestamp"] - entity_events[0]["timestamp"]).total_seconds() / 60,
+                1
+            )
+            entity_state["previous_power"] = max(entity_state["previous_power"] + session_net, 0.0)
+            entity_state["previous_resource"] = max(entity_state["previous_resource"] + session_net, 0.0)
 
             for metric_name, metric_value in metrics.items():
 
