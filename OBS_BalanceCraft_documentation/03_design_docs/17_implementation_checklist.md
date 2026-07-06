@@ -52,8 +52,31 @@ tags:
 - [x] Синхронизировать внутренние ссылки, `# FILE:` headers и навигацию с фактической структурой документации.
 - [x] Проверить, что приложение запускается до начала миграции.
 - [x] Зафиксировать фактические entry points: точку запуска Python, desktop shell, QWebChannel bridge, frontend entry, pipeline и DB initialization.
-- [ ] Составить короткий список файлов, которые точно трогаем первыми.
-- [ ] Составить короткий список файлов, которые пока не трогаем.
+- [x] Составить короткий список файлов, которые точно трогаем первыми.
+## First-touch files  
+  
+На первом этапе рефакторинга изменяются:  
+  
+- `app/backend/db.py` — новый единый SQLite DB layer.  
+- `app/backend/schema_sqlite.sql` — новая SQLite-схема.  
+- `app/main.py` — только startup/persistence boundary и подключение нового DB layer.  
+  
+В `app/main.py` не изменять UI rendering/GPU workaround без отдельной причины.
+
+- [x] Составить короткий список файлов, которые пока не трогаем.
+## Files not touched yet  
+  
+До соответствующих фаз не изменяются:  
+  
+- `app/backend/pipeline.py` — до новой import schema и Import Service.  
+- `app/backend/progression_model.py` — до Metric Engine.  
+- `app/backend/what_if_analysis.py` — до Simple What-if.  
+- `app/backend/practical_insights.py` — до появления новых metric outputs.  
+- `app/backend/stability_analysis.py` — P1/P2, не блокирует vertical slice.  
+- `app/ui/index.html`  
+- `app/ui/app.js`  
+- `app/ui/styles.css`  
+- `Database/SQL_Scripts/*` — legacy-only, не мигрировать на месте.
 
 ## Ручная проверка
 
