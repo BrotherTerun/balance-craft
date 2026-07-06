@@ -737,7 +737,6 @@ def eval_formula_node(node, context):
 
     import ast
     import operator
-    import math
 
     binary_ops = {
         ast.Add: operator.add,
@@ -753,29 +752,12 @@ def eval_formula_node(node, context):
         ast.USub: lambda value: -value
     }
 
-    def safe_sqrt(value):
-        return math.sqrt(max(to_float(value), 0.0))
-
-    def safe_log(value, base=math.e):
-        value = max(to_float(value), 1e-9)
-        base = max(to_float(base, math.e), 1e-9)
-        if abs(base - 1.0) <= 1e-9:
-            base = math.e
-        return math.log(value, base)
-
-    def safe_round(value, digits=0):
-        return round(to_float(value), int(to_float(digits)))
-
     functions = {
         "sum": safe_sum,
         "count": safe_count,
         "max": safe_max,
         "min": safe_min,
-        "abs": abs,
-        "sqrt": safe_sqrt,
-        "log": safe_log,
-        "pow": pow,
-        "round": safe_round
+        "abs": abs
     }
 
     if isinstance(node, ast.Expression):
@@ -1025,7 +1007,7 @@ def get_formula_variable_names(expression):
 
     import ast
 
-    ignored = {"sum", "count", "max", "min", "abs", "sqrt", "log", "pow", "round"}
+    ignored = {"sum", "count", "max", "min", "abs"}
 
     if not expression or not str(expression).strip():
         return set()
@@ -1051,9 +1033,8 @@ def get_active_formula_variable_keys(template, semantic_bindings, formula_config
     for expression in (formula_config or {}).values():
         names.update(get_formula_variable_names(expression))
 
-    # Важно: активные переменные определяются формулами, а не старым
-    # содержимым semantic_bindings. Иначе после изменения формулы в проекте
-    # могут оставаться неиспользуемые переменные из предыдущей настройки.
+    names.update((semantic_bindings or {}).keys())
+
     if not names:
         names.update(
             variable.get("key")
@@ -1423,19 +1404,14 @@ class Backend(QObject):
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
-        try:
-            cursor.execute("""
-                SELECT DISTINCT player_id
-                FROM sessions
-            """)
+        cursor.execute("""
+            SELECT DISTINCT player_id
+            FROM sessions
+        """)
 
-            result = cursor.fetchall()
+        result = cursor.fetchall()
 
-            return json.dumps(result, ensure_ascii=False)
-
-        finally:
-            cursor.close()
-            conn.close()
+        return json.dumps(result)
 
 
     @Slot(str, result=str)
@@ -1600,10 +1576,7 @@ class Backend(QObject):
     @Slot(str, str, result=str)
     def processPipeline(self, project_id, folder_path):
 
-        project = get_project_by_id(project_id)
-        template_id = (project or {}).get("selected_template") or "progression_decay"
-
-        result = run_pipeline(folder_path, template_id=template_id)
+        result = run_pipeline(folder_path)
 
         updated_project = update_project_import_result(
             project_id,
@@ -1863,9 +1836,14 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    # Не принуждаем Qt к SoftwareOpenGL: на большом экране это может дать
-    # заметную задержку отклика. Устойчивость QWebEngine держим более мягко —
-    # через Chromium flags выше и layout-стабилизацию в UI.
+    try:
+        QApplication.setAttribute(
+            Qt.ApplicationAttribute.AA_UseSoftwareOpenGL,
+            True
+        )
+    except Exception as e:
+        print("[UI] Software OpenGL attribute was not applied:", e)
+
     app = QApplication(sys.argv)
 
     window = MainWindow()
