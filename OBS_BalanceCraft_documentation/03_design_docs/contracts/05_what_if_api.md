@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/05_what_if_api.md`
-
+# FILE: `03_design_docs/contracts/05_what_if_api.md`
 # 05. What-if API
 
 Дата: 2026-07-02  

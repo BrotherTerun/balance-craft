@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/sequence_import.md`
-
+# FILE: `03_design_docs/diagrams/sequence_import.md`
 # Sequence diagram — JSONL import and profiling
 
 Дата: 2026-07-02  

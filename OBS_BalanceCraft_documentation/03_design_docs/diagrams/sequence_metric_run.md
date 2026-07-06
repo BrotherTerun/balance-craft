@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/sequence_metric_run.md`
-
+# FILE: `03_design_docs/diagrams/sequence_metric_run.md`
 # Sequence diagram — metric run and dashboard
 
 Дата: 2026-07-02  

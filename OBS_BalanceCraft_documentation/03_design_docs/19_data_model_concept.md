@@ -2,7 +2,7 @@
 
 Дата: 2026-07-02  
 Статус: draft  
-Связанные документы: `11_glossary.md`, `12_input_data_formats.md`, `13_design_requirements.md`, `16_feature_list.md`, `17_implementation_checklist.md`, `26_definition_of_done.md`, `adr/ADR-003`, `adr/ADR-004`, `adr/ADR-005`
+Связанные документы: `../01_pre_design_docs/11_glossary.md`, `../01_pre_design_docs/12_input_data_formats.md`, `../01_pre_design_docs/13_design_requirements.md`, `16_feature_list.md`, `17_implementation_checklist.md`, `26_definition_of_done.md`, `../01_pre_design_docs/adr/ADR-003-entity-observation-model.md`, `../01_pre_design_docs/adr/ADR-004-late-semantic-binding.md`, `../01_pre_design_docs/adr/ADR-005-what-if-levels.md`
 
 Диаграмма: [`diagrams/conceptual_data_model.md`](diagrams/conceptual_data_model.md)
 

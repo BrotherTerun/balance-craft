@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/00_diagrams_index.md`
-
+# FILE: `03_design_docs/diagrams/00_diagrams_index.md`
 # 00. Diagrams index
 
 Дата: 2026-07-02  
@@ -261,7 +260,7 @@ What-if panel → Scenario Service → What-if Engine → Parameter Service → 
 
 Связанный документ:
 
-- `../10_prototype_audit.md`
+- `../../01_pre_design_docs/10_prototype_audit.md`
 - `../25_test_plan.md`
 
 Содержит:
@@ -347,23 +346,24 @@ What-if panel → Scenario Service → What-if Engine → Parameter Service → 
 [ ] Migration diagram совпадает с prototype audit.
 ```
 
-## Возможная структура в репозитории
+## Текущая структура в репозитории
 
 ```text
-docs/
-  diagrams/
-    00_diagrams_index.md
-    architecture_context.md
-    architecture_container.md
-    architecture_components.md
-    conceptual_data_model.md
-    sqlite_erd.md
-    core_data_flows.md
-    sequence_import.md
-    sequence_metric_run.md
-    sequence_what_if.md
-    ui_flow.md
-    migration_overview.md
+OBS_BalanceCraft_documentation/
+  03_design_docs/
+    diagrams/
+      00_diagrams_index.md
+      architecture_context.md
+      architecture_container.md
+      architecture_components.md
+      conceptual_data_model.md
+      sqlite_erd.md
+      core_data_flows.md
+      sequence_import.md
+      sequence_metric_run.md
+      sequence_what_if.md
+      ui_flow.md
+      migration_overview.md
 ```
 
 ## Примечание по экспорту

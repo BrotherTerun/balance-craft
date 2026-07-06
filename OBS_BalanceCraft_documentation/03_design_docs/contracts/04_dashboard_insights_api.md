@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/04_dashboard_insights_api.md`
-
+# FILE: `03_design_docs/contracts/04_dashboard_insights_api.md`
 # 04. Dashboard and insights API
 
 Дата: 2026-07-02  

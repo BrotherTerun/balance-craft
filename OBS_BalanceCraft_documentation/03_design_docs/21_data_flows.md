@@ -1,5 +1,4 @@
-# FILE: `docs/21_data_flows.md`
-
+# FILE: `03_design_docs/21_data_flows.md`
 # 21. Data flows
 
 Дата: 2026-07-02  
@@ -29,10 +28,10 @@
 - `19_data_model_concept.md`
 - `20_sqlite_schema_design.md`
 - `26_definition_of_done.md`
-- `docs/diagrams/core_data_flows.md`
-- `docs/diagrams/sequence_import.md`
-- `docs/diagrams/sequence_metric_run.md`
-- `docs/diagrams/sequence_what_if.md`
+- `diagrams/core_data_flows.md`
+- `diagrams/sequence_import.md`
+- `diagrams/sequence_metric_run.md`
+- `diagrams/sequence_what_if.md`
 
 ## Общие правила потоков
 

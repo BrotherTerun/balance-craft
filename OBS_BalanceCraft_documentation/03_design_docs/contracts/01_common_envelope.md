@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/01_common_envelope.md`
-
+# FILE: `03_design_docs/contracts/01_common_envelope.md`
 # 01. Common envelope, errors, warnings and DTO rules
 
 Дата: 2026-07-02  

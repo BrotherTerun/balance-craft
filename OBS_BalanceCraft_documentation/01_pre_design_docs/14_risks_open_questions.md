@@ -1,5 +1,4 @@
-# FILE: `docs/14_risks_open_questions.md`
-
+# FILE: `01_pre_design_docs/14_risks_open_questions.md`
 # 14. Риски, допущения и открытые вопросы
 
 ## Риски продукта
@@ -190,14 +189,14 @@
 
 | ID | Решение | Зафиксировано в |
 |---|---|---|
-| Q-1 | В P0 входят четыре шаблона: Flow Balance, Stock Dynamics, Conversion Efficiency, Operation Intensity | `04_analysis_templates.md`, `16_feature_list.md`, `24_demo_project_spec.md` |
-| Q-2 | Полноценный import параметров — P1; в P0 используются seeded demo parameters или существующие `entity_parameters` | `16_feature_list.md`, contracts, `24_demo_project_spec.md` |
-| Q-3 | Минимальный What-if — P0: Level 1 + один узкий deterministic Level 2; generic Level 2 и управление множеством сценариев — P1 | `05_what_if_levels.md`, `16_feature_list.md`, `17_implementation_checklist.md` |
-| Q-4 | Demo scenario — `Demo Forge` | `24_demo_project_spec.md` |
-| Q-5 | CSV/JSON import параметров не входит в P0 и остаётся P1 | `12_input_data_formats.md`, `16_feature_list.md` |
-| Q-6 | Целевой demo dataset — 200–500 событий; допустим упрощённый dev-набор 120–200 событий | `24_demo_project_spec.md` |
-| Q-7 | Built-in templates хранятся в code registry; formula/binding snapshots — в БД | `18_architecture_overview.md`, `20_sqlite_schema_design.md` |
-| Q-10 | Demo показывает профицит/инфляцию, перегретую конверсию и просадку интенсивности; P1-lite симптомы опциональны | `24_demo_project_spec.md` |
+| Q-1 | В P0 входят четыре шаблона: Flow Balance, Stock Dynamics, Conversion Efficiency, Operation Intensity | `04_analysis_templates.md`, `../03_design_docs/16_feature_list.md`, `../03_design_docs/24_demo_project_spec.md` |
+| Q-2 | Полноценный import параметров — P1; в P0 используются seeded demo parameters или существующие `entity_parameters` | `../03_design_docs/16_feature_list.md`, contracts, `../03_design_docs/24_demo_project_spec.md` |
+| Q-3 | Минимальный What-if — P0: Level 1 + один узкий deterministic Level 2; generic Level 2 и управление множеством сценариев — P1 | `05_what_if_levels.md`, `../03_design_docs/16_feature_list.md`, `../03_design_docs/17_implementation_checklist.md` |
+| Q-4 | Demo scenario — `Demo Forge` | `../03_design_docs/24_demo_project_spec.md` |
+| Q-5 | CSV/JSON import параметров не входит в P0 и остаётся P1 | `12_input_data_formats.md`, `../03_design_docs/16_feature_list.md` |
+| Q-6 | Целевой demo dataset — 200–500 событий; допустим упрощённый dev-набор 120–200 событий | `../03_design_docs/24_demo_project_spec.md` |
+| Q-7 | Built-in templates хранятся в code registry; formula/binding snapshots — в БД | `../03_design_docs/18_architecture_overview.md`, `../03_design_docs/20_sqlite_schema_design.md` |
+| Q-10 | Demo показывает профицит/инфляцию, перегретую конверсию и просадку интенсивности; P1-lite симптомы опциональны | `../03_design_docs/24_demo_project_spec.md` |
 
 ## Отложенные вопросы
 

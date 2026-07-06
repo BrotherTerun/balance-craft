@@ -1,5 +1,4 @@
-# FILE: `docs/23_ui_flow_and_screen_map.md`
-
+# FILE: `03_design_docs/23_ui_flow_and_screen_map.md`
 # 23. UI flow и карта экранов BalanceCraft Desktop
 
 Дата: 2026-07-02  
@@ -53,7 +52,7 @@ launch app
 
 ## Общая карта экранов
 
-См. также: `docs/diagrams/ui_flow.md`.
+См. также: `diagrams/ui_flow.md`.
 
 ```text
 Start / Project Hub
@@ -795,7 +794,7 @@ Demo project должен быть полноценным проектом с с
 
 ### Связанный документ
 
-Подробно: `docs/24_demo_project_spec.md`.
+Подробно: `24_demo_project_spec.md`.
 
 ## Global UI states
 

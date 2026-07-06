@@ -2,7 +2,7 @@
 
 Дата: 2026-07-02  
 Статус: рабочий проектировочный документ  
-Связанные документы: `02_product_frame.md`, `08_requirements.md`, `09_mvp_scope_timeline.md`, `10_prototype_audit.md`, `13_design_requirements.md`, `16_feature_list.md`, `17_implementation_checklist.md`, `19_data_model_concept.md`, `20_sqlite_schema_design.md`
+Связанные документы: `../01_pre_design_docs/02_product_frame.md`, `../01_pre_design_docs/08_requirements.md`, `../01_pre_design_docs/09_mvp_scope_timeline.md`, `../01_pre_design_docs/10_prototype_audit.md`, `../01_pre_design_docs/13_design_requirements.md`, `16_feature_list.md`, `17_implementation_checklist.md`, `19_data_model_concept.md`, `20_sqlite_schema_design.md`
 
 ## 1. Назначение документа
 
@@ -123,7 +123,7 @@ Backend не должен отдавать UI stack traces как пользов
 
 ### 3.7. Diagrams are part of architecture
 
-Диаграммы в `docs/diagrams/` считаются частью проектирования, а не декоративным приложением.
+Диаграммы в `diagrams/` считаются частью проектирования, а не декоративным приложением.
 
 Если текст и диаграмма расходятся, это баг документации.
 

@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/core_data_flows.md`
-
+# FILE: `03_design_docs/diagrams/core_data_flows.md`
 # Core data flow diagrams
 
 Дата: 2026-07-02  

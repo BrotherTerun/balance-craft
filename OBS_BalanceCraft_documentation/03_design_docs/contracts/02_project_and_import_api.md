@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/02_project_and_import_api.md`
-
+# FILE: `03_design_docs/contracts/02_project_and_import_api.md`
 # 02. Project lifecycle and import API
 
 Дата: 2026-07-02  

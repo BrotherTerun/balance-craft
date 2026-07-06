@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/00_contracts_index.md`
-
+# FILE: `03_design_docs/contracts/00_contracts_index.md`
 # Backend ↔ Frontend contracts index
 
 Дата: 2026-07-02  

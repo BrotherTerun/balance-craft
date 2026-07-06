@@ -1,5 +1,4 @@
-# FILE: `docs/24_demo_project_spec.md`
-
+# FILE: `03_design_docs/24_demo_project_spec.md`
 # 24. Demo project specification
 
 Дата: 2026-07-02  

@@ -2,7 +2,7 @@
 
 Дата: 2026-07-02  
 Статус: рабочий проектировочный черновик  
-Связанные документы: `13_design_requirements.md`, `19_data_model_concept.md`, `docs/diagrams/sqlite_erd.md`
+Связанные документы: `../01_pre_design_docs/13_design_requirements.md`, `19_data_model_concept.md`, `diagrams/sqlite_erd.md`
 
 ## 1. Назначение документа
 

@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/sequence_what_if.md`
-
+# FILE: `03_design_docs/diagrams/sequence_what_if.md`
 # Sequence diagram — simple What-if scenario
 
 Дата: 2026-07-02  

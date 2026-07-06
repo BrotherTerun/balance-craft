@@ -1,5 +1,4 @@
-# FILE: `docs/contracts/03_profile_binding_metrics_api.md`
-
+# FILE: `03_design_docs/contracts/03_profile_binding_metrics_api.md`
 # 03. Data profile, coverage, bindings and metric calculation API
 
 Дата: 2026-07-02  
@@ -157,7 +156,7 @@ build_id
 - `whole_project` создаёт одну группу для всего выбранного набора данных;
 - остальные значения группируют по соответствующему стабильному ключу;
 - неизвестный `group_by` возвращает validation error;
-- порядок точек и присвоение `x_index` выполняются по deterministic rules из `21_data_flows.md`.
+- порядок точек и присвоение `x_index` выполняются по deterministic rules из `../21_data_flows.md`.
 
 ## Aggregation enum
 

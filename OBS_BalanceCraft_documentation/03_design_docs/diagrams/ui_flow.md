@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/ui_flow.md`
-
+# FILE: `03_design_docs/diagrams/ui_flow.md`
 # UI Flow Diagrams
 
 Дата: 2026-07-02  

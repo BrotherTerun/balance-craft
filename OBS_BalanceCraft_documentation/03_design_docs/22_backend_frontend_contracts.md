@@ -1,5 +1,4 @@
-# FILE: `docs/22_backend_frontend_contracts.md`
-
+# FILE: `03_design_docs/22_backend_frontend_contracts.md`
 # 22. Backend ↔ Frontend contracts
 
 Дата: 2026-07-02  
@@ -52,17 +51,17 @@ Backend:
 - возвращает stable JSON-like envelope;
 - не возвращает raw traceback как пользовательскую ошибку.
 
-## Почему детальные контракты вынесены в `docs/contracts/`
+## Почему детальные контракты вынесены в `contracts/`
 
 API-контракты быстро становятся крупными. Чтобы `22_backend_frontend_contracts.md` не превратился в глиняную табличку на 80 экранов, подробные схемы методов вынесены в отдельные файлы:
 
 ```text
-docs/contracts/00_contracts_index.md
-docs/contracts/01_common_envelope.md
-docs/contracts/02_project_and_import_api.md
-docs/contracts/03_profile_binding_metrics_api.md
-docs/contracts/04_dashboard_insights_api.md
-docs/contracts/05_what_if_api.md
+contracts/00_contracts_index.md
+contracts/01_common_envelope.md
+contracts/02_project_and_import_api.md
+contracts/03_profile_binding_metrics_api.md
+contracts/04_dashboard_insights_api.md
+contracts/05_what_if_api.md
 ```
 
 Этот файл остаётся главной точкой входа и фиксирует общие правила.
@@ -121,7 +120,7 @@ UI-код работает так, будто каждый backend method воз
 
 UI не должен зависеть от наличия `meta` в P0.
 
-Подробно: `docs/contracts/01_common_envelope.md`.
+Подробно: `contracts/01_common_envelope.md`.
 
 ## Приоритеты методов
 

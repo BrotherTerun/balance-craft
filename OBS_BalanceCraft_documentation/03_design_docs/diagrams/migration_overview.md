@@ -1,5 +1,4 @@
-# FILE: `docs/diagrams/migration_overview.md`
-
+# FILE: `03_design_docs/diagrams/migration_overview.md`
 # Migration Overview Diagrams
 
 Дата: 2026-07-02  

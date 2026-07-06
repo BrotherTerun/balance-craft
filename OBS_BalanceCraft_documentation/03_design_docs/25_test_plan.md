@@ -1,5 +1,4 @@
-# FILE: `docs/25_test_plan.md`
-
+# FILE: `03_design_docs/25_test_plan.md`
 # 25. Test plan и QA checklist
 
 Дата: 2026-07-02  
@@ -25,11 +24,11 @@ SQLite не создаётся
 
 ## Связанные документы
 
-- `08_requirements.md`
-- `09_mvp_scope_timeline.md`
-- `10_prototype_audit.md`
-- `12_input_data_formats.md`
-- `13_design_requirements.md`
+- `../01_pre_design_docs/08_requirements.md`
+- `../01_pre_design_docs/09_mvp_scope_timeline.md`
+- `../01_pre_design_docs/10_prototype_audit.md`
+- `../01_pre_design_docs/12_input_data_formats.md`
+- `../01_pre_design_docs/13_design_requirements.md`
 - `16_feature_list.md`
 - `17_implementation_checklist.md`
 - `18_architecture_overview.md`
@@ -929,7 +928,7 @@ skills as required core table
 Допустимо:
 
 ```text
-упоминания в docs/10_prototype_audit.md;
+упоминания в ../01_pre_design_docs/10_prototype_audit.md;
 legacy migration notes;
 comments в migration checklist, если они не выполняются runtime-кодом.
 ```
@@ -1057,10 +1056,10 @@ progress/status показывается, если реализован;
 
 Вопросы для общего ревью после сборки проектировочного комплекта:
 
-1. Достаточно ли test data наборов или нужен отдельный `examples/test_data/README.md`?
+1. Достаточно ли test data наборов или нужен отдельный `../README.md`?
 2. Нужно ли делать `large_100k` обязательным для портфолио-MVP или оставить P1 smoke?
 3. Должен ли What-if быть обязательным в acceptance matrix, если сроки начнут гореть?
-4. Нужно ли выделять automated tests отдельно в `tests/README.md` после начала реализации?
+4. Нужно ли выделять automated tests отдельно в `../README.md` после начала реализации?
 5. Хватит ли grep checklist или нужен отдельный legacy CI-check script?
 
 ## Главное правило
